@@ -1,6 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/market-api/market-api-arbitration/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-arbitration/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-credit/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-credit/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-file/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-file/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-message/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-message/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-product/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-product/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-trade/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-trade/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-user/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/market-api-user/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-auth/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-auth/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-common/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-common/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-gateway/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-gateway/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-admin/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-admin/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-arbitration/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-arbitration/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-credit/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-credit/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-file/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-file/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-product/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-product/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-user/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/market-service-user/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/market-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
   </component>
