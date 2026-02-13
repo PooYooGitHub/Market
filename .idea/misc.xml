@@ -3,6 +3,8 @@
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="FrameworkDetectionExcludesConfiguration">
     <file type="web" url="file://$PROJECT_DIR$/market-common" />
+    <file type="web" url="file://$PROJECT_DIR$/market-service/market-service-message" />
+    <file type="web" url="file://$PROJECT_DIR$/market-service/market-service-trade" />
   </component>
   <component name="MavenProjectsManager">
     <option name="originalFiles">
