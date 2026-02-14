@@ -23,9 +23,9 @@ spring:
           enabled: true  # 启用服务发现路由
           lower-case-service-id: true
       routes:
-        # 用户服务路由 -> 核心服务
+        # 用户服务路由
         - id: market-service-user
-          uri: lb://market-service-core
+          uri: lb://market-service-user
           predicates:
             - Path=/api/user/**
           filters:
