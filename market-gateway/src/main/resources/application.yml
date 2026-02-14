@@ -1,0 +1,18 @@
+# Gateway 应用配置
+spring:
+  application:
+    name: market-gateway
+  # 明确指定为响应式Web应用
+  main:
+    web-application-type: reactive
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    org.shyu: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    com.alibaba.nacos: INFO
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n'
+

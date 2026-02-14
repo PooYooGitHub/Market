@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: market-gateway
+  cloud:
+    nacos:
+      server-addr: 127.0.0.1:8849
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: 127.0.0.1:8849
+        # 使用默认的public命名空间
+        username: nacos
+        password: nacos
+      config:
+        server-addr: 127.0.0.1:8849
+        # 使用默认的public命名空间
+        file-extension: yml
+        username: nacos
+        password: nacos
+    gateway:
+      discovery:
+        locator:
+          enabled: true  # 启用服务发现路由
+          lower-case-service-id: true
+      routes:
+        # 用户服务路由 -> 核心服务
+        - id: market-service-user
+          uri: lb://market-service-core
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+        # 商品服务路由 -> 核心服务
+        - id: market-service-product
+          uri: lb://market-service-core
+          predicates:
+            - Path=/api/product/**
+          filters:
+            - StripPrefix=1
+        # 交易服务路由 -> 核心服务
+        - id: market-service-trade
+          uri: lb://market-service-core
+          predicates:
+            - Path=/api/trade/**
+          filters:
+            - StripPrefix=1
+        # 认证服务路由
+        - id: market-auth
+          uri: lb://market-auth
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+
+server:
+  port: 9000  # Gateway使用9000端口
+
+# Sa-Token 配置
+sa-token:
+  token-name: Authorization
+  timeout: 2592000  # 30天
+  active-timeout: -1  # 修正配置项名称
+  is-concurrent: true
+  is-share: false
+  is-log: false
+

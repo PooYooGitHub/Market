@@ -1,0 +1,26 @@
+# 应用配置
+spring:
+  application:
+    name: market-auth
+  profiles:
+    active: dev
+
+# Nacos客户端配置
+nacos:
+  client:
+    naming:
+      connect-timeout: 30000
+      request-timeout: 30000
+    config:
+      connect-timeout: 30000
+      request-timeout: 30000
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    org.shyu: DEBUG
+    com.alibaba.nacos: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n'
+

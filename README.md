@@ -7,6 +7,24 @@
 [![Spring Cloud Alibaba](https://img.shields.io/badge/Spring%20Cloud%20Alibaba-2022.0.0.0-orange.svg)](https://github.com/alibaba/spring-cloud-alibaba)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## 🚀 快速启动
+
+### 前置要求
+- JDK 8+
+- Maven 3.6+
+- Docker Desktop（用于运行基础设施）
+
+### 一键启动
+```powershell
+# 1. 启动Nacos（包含gRPC端口映射）
+.\restart-nacos.ps1
+
+# 2. 启动认证服务
+.\start-auth.ps1
+```
+
+📖 **详细说明**: [START_GUIDE.md](./START_GUIDE.md) | [FIX_SUMMARY.md](./FIX_SUMMARY.md)
+
 ## 📋 项目简介
 
 校园跳蚤市场平台是一个专为校园师生打造的二手物品交易平台，采用先进的微服务架构，提供商品发布、在线交易、即时通讯、信用评价、纠纷仲裁等完整功能，致力于打造安全、便捷、可信的校园交易生态。
