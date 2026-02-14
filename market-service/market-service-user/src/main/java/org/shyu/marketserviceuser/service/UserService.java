@@ -1,6 +1,7 @@
 package org.shyu.marketserviceuser.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.shyu.marketapiuser.dto.UserDTO;
 import org.shyu.marketapiuser.dto.UserLoginDTO;
 import org.shyu.marketapiuser.dto.UserRegisterDTO;
 import org.shyu.marketapiuser.entity.User;
@@ -10,23 +11,34 @@ import org.shyu.marketserviceuser.entity.UserEntity;
 import org.shyu.marketserviceuser.vo.UserStatisticsVO;
 
 /**
- * 用户服务接口
+ * User Service Interface
  */
 public interface UserService extends IService<UserEntity> {
 
     /**
-     * 用户注册
-     * @param registerDTO 注册信息
-     * @return 用户信息
+     * User Registration (for Auth Service)
+     * @param registerDTO registration info
+     * @return userId
      */
-    UserVO register(UserRegisterDTO registerDTO);
+    Long register(UserRegisterDTO registerDTO);
+
 
     /**
-     * 用户登录
-     * @param loginDTO 登录信息
-     * @return 登录结果（包含token）
+     * Validate Login Credentials (for Auth Service)
+     * @param username username
+     * @param password plain password
+     * @return user info if valid
+     */
+    UserDTO validateLogin(String username, String password);
+
+    /**
+     * User Login (legacy)
+     * @param loginDTO login info
+     * @return login result with token
      */
     LoginVO login(UserLoginDTO loginDTO);
+
+    // ...existing code...
 
     /**
      * 根据用户名查询用户

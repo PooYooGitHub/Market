@@ -1,22 +1,19 @@
 package org.shyu.marketserviceuser.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import org.shyu.marketapiuser.dto.UserLoginDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.shyu.marketapiuser.dto.UserDTO;
 import org.shyu.marketapiuser.dto.UserRegisterDTO;
-import org.shyu.marketapiuser.vo.LoginVO;
-import org.shyu.marketapiuser.vo.UserVO;
 import org.shyu.marketcommon.result.Result;
 import org.shyu.marketserviceuser.service.UserService;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 /**
- * 用户认证控制器
+ * User Auth Controller
+ * Provides authentication-related interfaces for Auth Service
  */
-@Api(tags = "用户认证")
+@Slf4j
 @RestController
 @RequestMapping("/api/user/auth")
 @RequiredArgsConstructor
@@ -25,34 +22,41 @@ public class UserAuthController {
     private final UserService userService;
 
     /**
-     * 用户注册
+     * User Registration
+     * Called by Auth Service
      */
-    @ApiOperation("用户注册")
     @PostMapping("/register")
-    public Result<UserVO> register(@Validated @RequestBody UserRegisterDTO registerDTO) {
-        UserVO userVO = userService.register(registerDTO);
-        return Result.success("注册成功", userVO);
+    public Result<Long> register(@Validated @RequestBody UserRegisterDTO registerDTO) {
+        log.info("Registration request: username={}", registerDTO.getUsername());
+
+        try {
+            Long userId = userService.register(registerDTO);
+            return Result.success("Registration successful", userId);
+        } catch (Exception e) {
+            log.error("Registration failed: {}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
-     * 用户登录
+     * Validate Login Credentials
+     * Called by Auth Service
+     * @param username username
+     * @param password plain password
+     * @return user info if valid
      */
-    @ApiOperation("用户登录")
-    @PostMapping("/login")
-    public Result<LoginVO> login(@Validated @RequestBody UserLoginDTO loginDTO) {
-        LoginVO loginVO = userService.login(loginDTO);
-        return Result.success("登录成功", loginVO);
-    }
+    @PostMapping("/validate-login")
+    public Result<UserDTO> validateLogin(@RequestParam String username,
+                                         @RequestParam String password) {
+        log.info("Validate login request: username={}", username);
 
-    /**
-     * 用户登出
-     */
-    @ApiOperation("用户登出")
-    @PostMapping("/logout")
-    public Result<String> logout() {
-        // Sa-Token会自动处理登出逻辑
-        StpUtil.logout();
-        return Result.success("登出成功", null);
+        try {
+            UserDTO userDTO = userService.validateLogin(username, password);
+            return Result.success(userDTO);
+        } catch (Exception e) {
+            log.error("Login validation failed: {}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 }
 

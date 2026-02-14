@@ -30,27 +30,23 @@ spring:
             - Path=/api/user/**
           filters:
             - StripPrefix=1
-        # 商品服务路由 -> 核心服务
+
+        # 商品服务路由
         - id: market-service-product
-          uri: lb://market-service-core
+          uri: lb://market-service-product
           predicates:
             - Path=/api/product/**
           filters:
             - StripPrefix=1
-        # 交易服务路由 -> 核心服务
+
+        # 交易服务路由
         - id: market-service-trade
-          uri: lb://market-service-core
+          uri: lb://market-service-trade
           predicates:
             - Path=/api/trade/**
           filters:
             - StripPrefix=1
-        # 认证服务路由
-        - id: market-auth
-          uri: lb://market-auth
-          predicates:
-            - Path=/api/auth/**
-          filters:
-            - StripPrefix=1
+
       globalcors:
         cors-configurations:
           '[/**]':
@@ -59,15 +55,36 @@ spring:
             allowedHeaders: "*"
             allowCredentials: true
 
+  # Redis 配置（用于验证 Token）
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+    password:
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
+
 server:
   port: 9000  # Gateway使用9000端口
 
-# Sa-Token 配置
-sa-token:
-  token-name: Authorization
-  timeout: 2592000  # 30天
-  active-timeout: -1  # 修正配置项名称
-  is-concurrent: true
-  is-share: false
-  is-log: false
+# Gateway 认证白名单配置
+gateway:
+  auth:
+    white-list:
+      - /api/user/login
+      - /api/user/register
+      - /api/product/list
+      - /api/product/detail
+      - /api/product/category
+      - /feign
+
+# 日志配置
+logging:
+  level:
+    org.shyu.marketgateway: DEBUG
+    org.springframework.cloud.gateway: INFO
 

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.shyu.marketapiuser.dto.UserDTO;
 import org.shyu.marketapiuser.dto.UserLoginDTO;
 import org.shyu.marketapiuser.dto.UserRegisterDTO;
 import org.shyu.marketapiuser.entity.User;
@@ -30,9 +31,13 @@ import java.time.LocalTime;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> implements UserService {
 
+    /**
+     * 用户注册（用于认证服务）
+     * 仅返回userId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public UserVO register(UserRegisterDTO registerDTO) {
+    public Long register(UserRegisterDTO registerDTO) {
         // 1. 验证密码一致性
         if (!registerDTO.getPassword().equals(registerDTO.getConfirmPassword())) {
             throw new BusinessException("两次密码输入不一致");
@@ -70,8 +75,37 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> impleme
 
         log.info("用户注册成功: username={}, id={}", user.getUsername(), user.getId());
 
-        // 6. 转换为VO返回
-        return BeanUtil.copyProperties(user, UserVO.class);
+        return user.getId();
+    }
+
+    /**
+     * 验证登录凭据（用于认证服务）
+     */
+    @Override
+    public UserDTO validateLogin(String username, String password) {
+        // 1. 根据用户名查询用户
+        User user = getByUsername(username);
+        if (user == null) {
+            throw new BusinessException("用户名或密码错误");
+        }
+
+        // 2. 验证密码
+        if (!BCrypt.checkpw(password, user.getPassword())) {
+            throw new BusinessException("用户名或密码错误");
+        }
+
+        // 3. 检查用户状态
+        if (user.getStatus() == 0) {
+            throw new BusinessException("账号已被删除");
+        }
+        if (user.getStatus() == 2) {
+            throw new BusinessException("账号已被禁用");
+        }
+
+        log.info("登录验证成功: username={}, id={}", username, user.getId());
+
+        // 4. 转换为DTO返回
+        return BeanUtil.copyProperties(user, UserDTO.class);
     }
 
     @Override

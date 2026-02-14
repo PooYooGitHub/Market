@@ -17,7 +17,6 @@
         <module>market-common</module>
         <module>market-api</module>
         <module>market-gateway</module>
-        <module>market-auth</module>
         <module>market-service</module>
     </modules>
 
