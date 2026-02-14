@@ -23,10 +23,13 @@ import java.util.stream.Collectors;
 /**
  * 用户管理控制器
  * 用于管理员管理用户
+ *
+ * 注意：Gateway 配置了 StripPrefix=1，会移除 /api 前缀
+ * 所以这里的 RequestMapping 是 /user/admin，而不是 /api/user/admin
  */
 @Api(tags = "用户管理")
 @RestController
-@RequestMapping("/api/user/admin")
+@RequestMapping("/user/admin")
 @RequiredArgsConstructor
 public class UserAdminController {
 

@@ -18,10 +18,18 @@ import cn.hutool.core.bean.BeanUtil;
 /**
  * 用户信息控制器
  * 供前端直接调用的接口
+ *
+ * 注意：Gateway 配置了 StripPrefix=1，会移除 /api 前缀
+ * 所以这里的 RequestMapping 是 /user，而不是 /api/user
+ *
+ * 完整路径示例：
+ * - 前端请求: /api/user/register
+ * - Gateway 转发: /user/register (StripPrefix 后)
+ * - Controller 处理: @RequestMapping("/user") + @PostMapping("/register")
  */
 @Api(tags = "用户信息")
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -116,4 +124,3 @@ public class UserController {
         }
     }
 }
-

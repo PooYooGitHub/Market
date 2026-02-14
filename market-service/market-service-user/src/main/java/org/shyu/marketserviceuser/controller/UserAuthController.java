@@ -12,10 +12,18 @@ import org.springframework.web.bind.annotation.*;
 /**
  * User Auth Controller
  * Provides authentication-related interfaces for Auth Service
+ *
+ * 注意：Gateway 配置了 StripPrefix=1，会移除 /api 前缀
+ * 所以这里的 RequestMapping 是 /user/auth，而不是 /api/user/auth
+ *
+ * 完整路径示例：
+ * - 前端请求: /api/user/auth/register
+ * - Gateway 转发: /user/auth/register (StripPrefix 后)
+ * - Controller 处理: @RequestMapping("/user/auth") + @PostMapping("/register")
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/user/auth")
+@RequestMapping("/user/auth")
 @RequiredArgsConstructor
 public class UserAuthController {
 

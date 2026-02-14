@@ -21,9 +21,8 @@ public class WhiteListProperties {
      * 这些路径不需要登录即可访问
      */
     private List<String> whiteList = Arrays.asList(
-        // 用户服务 - 登录注册
-        "/api/user/login",
-        "/api/user/register",
+        // 用户服务 - 认证相关接口（登录、注册、验证等）
+        "/api/user/auth/",  // 所有认证接口：/api/user/auth/register, /api/user/auth/login 等
 
         // 商品服务 - 游客可浏览
         "/api/product/list",

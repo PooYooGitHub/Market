@@ -8,15 +8,22 @@ spring:
       password: nacos
       discovery:
         server-addr: 127.0.0.1:8849
-        # 使用默认的public命名空间
         username: nacos
         password: nacos
+        # 配置 Nacos 连接超时和重试
+        naming-load-cache-at-start: true  # 启动时加载服务列表
+        naming-polling-thread-count: 1  # 轮询线程数
+        # 使用 HTTP 长轮询而不是 gRPC (避免超时)
+        naming-use-endpoint-parsing-rule: false
+        register-enabled: true
+        heartbeat-interval: 5000  # 心跳间隔5秒
+        timeout: 3000  # 超时时间3秒
       config:
         server-addr: 127.0.0.1:8849
-        # 使用默认的public命名空间
         file-extension: yml
         username: nacos
         password: nacos
+        timeout: 3000
     gateway:
       discovery:
         locator:

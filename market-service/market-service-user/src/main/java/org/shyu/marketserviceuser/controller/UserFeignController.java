@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.*;
 /**
  * User Feign Controller
  * Provides internal service call interfaces (for Auth Service and other services)
+ *
+ * 注意：Gateway 配置了 StripPrefix=1，会移除 /api 前缀
+ * 所以这里的 RequestMapping 是 /user，而不是 /api/user
  */
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/user")
 @RequiredArgsConstructor
 public class UserFeignController {
 
