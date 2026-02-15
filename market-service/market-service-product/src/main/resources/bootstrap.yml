@@ -1,6 +1,11 @@
 spring:
   application:
     name: market-service-product
+  main:
+    allow-bean-definition-overriding: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   cloud:
     nacos:
       discovery:
@@ -13,7 +18,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/market_product?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: root
+    password: 123456789
     druid:
       initial-size: 5
       min-idle: 5
@@ -26,15 +31,17 @@ spring:
     host: 127.0.0.1
     port: 6379
     database: 0
-    password: 
+    password:
     lettuce:
       pool:
         max-active: 8
         max-idle: 8
         min-idle: 0
         max-wait: -1ms
+
 server:
   port: 8102
+
 # MyBatis Plus 配置
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -43,25 +50,15 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     cache-enabled: false
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  global-config:
-    db-config:
-      id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-# Knife4j 配置
-knife4j:
-  enable: true
-  openapi:
-    title: 商品服务API文档
-    description: 校园跳蚤市场-商品服务接口文档
-    version: 1.0
-    contact:
-      name: Market Team
-      email: market@example.com
-    group:
-      default:
-        group-name: default
-        api-rule: package
-        api-rule-resources:
-          - org.shyu.marketserviceproduct.controller
+
+# Sa-Token 配置
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  activity-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+  is-print: false
+

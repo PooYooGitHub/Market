@@ -3,6 +3,10 @@ import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
+import ProductList from '@/views/ProductList.vue'
+import ProductDetail from '@/views/ProductDetail.vue'
+import ProductForm from '@/views/ProductForm.vue'
+import MyProducts from '@/views/MyProducts.vue'
 
 // 路由配置
 const routes = [
@@ -39,6 +43,50 @@ const routes = [
     meta: {
       title: '个人中心',
       requiresAuth: true // 需要登录才能访问
+    }
+  },
+  // 商品相关路由
+  {
+    path: '/products',
+    name: 'ProductList',
+    component: ProductList,
+    meta: {
+      title: '商品列表'
+    }
+  },
+  {
+    path: '/product/:id',
+    name: 'ProductDetail',
+    component: ProductDetail,
+    meta: {
+      title: '商品详情'
+    }
+  },
+  {
+    path: '/product/publish',
+    name: 'ProductPublish',
+    component: ProductForm,
+    meta: {
+      title: '发布商品',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/product/edit/:id',
+    name: 'ProductEdit',
+    component: ProductForm,
+    meta: {
+      title: '编辑商品',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/my-products',
+    name: 'MyProducts',
+    component: MyProducts,
+    meta: {
+      title: '我的商品',
+      requiresAuth: true
     }
   }
 ]

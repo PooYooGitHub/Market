@@ -38,6 +38,14 @@ spring:
           filters:
             - StripPrefix=1
 
+        # 分类服务路由（独立配置，避免与商品路由冲突）
+        - id: market-service-category
+          uri: lb://market-service-product
+          predicates:
+            - Path=/api/product/category/**
+          filters:
+            - StripPrefix=2  # 去掉 /api/product，保留 /category/**
+
         # 商品服务路由
         - id: market-service-product
           uri: lb://market-service-product
@@ -54,13 +62,14 @@ spring:
           filters:
             - StripPrefix=1
 
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-            allowCredentials: true
+        # 文件服务路由
+        - id: market-service-file
+          uri: lb://market-service-file
+          predicates:
+            - Path=/api/file/**
+          filters:
+            - StripPrefix=1
+
 
   # Redis 配置（用于验证 Token）
   redis:
@@ -82,12 +91,17 @@ server:
 gateway:
   auth:
     white-list:
+      # 用户相关公开接口
+      - /api/user/auth/login
+      - /api/user/auth/register
       - /api/user/login
       - /api/user/register
+      # 商品相关公开接口
       - /api/product/list
-      - /api/product/detail
-      - /api/product/category
-      - /feign
+      - /api/product/detail/**
+      - /api/product/category/**
+      # Feign内部调用
+      - /feign/**
 
 # 日志配置
 logging:

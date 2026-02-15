@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: market-service-file
+  servlet:
+    multipart:
+      max-file-size: 10MB        # 单个文件最大10MB
+      max-request-size: 50MB     # 总请求最大50MB
+      enabled: true              # 启用multipart支持
+      resolve-lazily: false      # 立即解析multipart请求
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8849
+      config:
+        server-addr: 127.0.0.1:8849
+        file-extension: yml
+
+server:
+  port: 8106
+
+# MinIO 配置
+minio:
+  endpoint: http://localhost:9001
+  access-key: admin
+  secret-key: 3083446265@qq.com
+  bucket:
+    product: market-product      # 商品图片桶
+    avatar: market-avatar        # 用户头像桶
+    arbitration: market-arbitration  # 仲裁证据桶
+
+# Sa-Token 配置
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  activity-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+
+# 禁用 Swagger (File 服务不需要 API 文档)
+springfox:
+  documentation:
+    enabled: false
+
+knife4j:
+  enable: false
+

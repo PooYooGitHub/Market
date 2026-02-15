@@ -5,8 +5,12 @@
       <div class="header-content">
         <h1 class="logo">🏫 校园跳蚤市场</h1>
         <nav class="nav">
+          <router-link to="/" class="nav-link">首页</router-link>
+          <router-link to="/products" class="nav-link">商品列表</router-link>
           <template v-if="userStore.isLoggedIn">
-            <span class="welcome">欢迎，{{ userStore.nickname || userStore.username }}</span>
+            <router-link to="/product/publish" class="nav-link">发布商品</router-link>
+            <router-link to="/my-products" class="nav-link">我的商品</router-link>
+            <span class="welcome">{{ userStore.nickname || userStore.username }}</span>
             <router-link to="/profile" class="nav-link">个人中心</router-link>
             <button @click="handleLogout" class="nav-button">退出登录</button>
           </template>
@@ -57,8 +61,13 @@
       </div>
 
       <div v-else class="user-section">
-        <h3>您已登录</h3>
+        <h3>欢迎回来！</h3>
         <p>开始发布您的闲置物品，或浏览其他用户的商品吧！</p>
+        <div class="quick-actions">
+          <router-link to="/products" class="action-button secondary">浏览商品</router-link>
+          <router-link to="/product/publish" class="action-button primary">发布商品</router-link>
+          <router-link to="/my-products" class="action-button secondary">我的商品</router-link>
+        </div>
       </div>
     </main>
 
@@ -294,7 +303,45 @@ const handleLogout = () => {
 .user-section p {
   color: #666;
   font-size: 16px;
-  margin: 0;
+  margin: 0 0 24px;
+}
+
+.quick-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  padding: 14px 32px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s;
+  display: inline-block;
+}
+
+.action-button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.action-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.action-button.secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.action-button.secondary:hover {
+  background: #667eea;
+  color: white;
 }
 
 /* 页脚 */
@@ -329,6 +376,21 @@ const handleLogout = () => {
   .header-content {
     flex-direction: column;
     gap: 16px;
+  }
+  
+  .nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .nav-link,
+  .nav-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .welcome {
+    font-size: 12px;
   }
 }
 </style>

@@ -63,8 +63,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> impleme
         // 使用BCrypt加密密码
         user.setPassword(BCrypt.hashpw(registerDTO.getPassword()));
         user.setNickname(registerDTO.getNickname() != null ? registerDTO.getNickname() : registerDTO.getUsername());
-        user.setPhone(registerDTO.getPhone());
-        user.setEmail(registerDTO.getEmail());
+        // 将空字符串转换为null，避免违反唯一索引约束
+        user.setPhone(isNotEmpty(registerDTO.getPhone()) ? registerDTO.getPhone() : null);
+        user.setEmail(isNotEmpty(registerDTO.getEmail()) ? registerDTO.getEmail() : null);
         user.setStatus(1); // 默认正常状态
 
         // 5. 保存到数据库
@@ -236,6 +237,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> impleme
         statistics.setTodayRegister(count(todayWrapper));
 
         return statistics;
+    }
+
+    /**
+     * 判断字符串是否不为空
+     * 空字符串、null、纯空格都视为空
+     */
+    private boolean isNotEmpty(String str) {
+        return str != null && !str.trim().isEmpty();
     }
 }
 

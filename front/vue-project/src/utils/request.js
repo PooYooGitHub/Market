@@ -32,15 +32,25 @@ service.interceptors.response.use(
     if (res.code !== 200) {
       // 401 未登录
       if (res.code === 401) {
-        alert('登录已过期，请重新登录')
-        localStorage.removeItem('token')
-        localStorage.removeItem('userInfo')
-        router.push('/login')
+        console.warn('请求需要登录，接口:', response.config.url)
+        
+        // 对于某些公开接口，不应该自动跳转登录页
+        const publicUrls = ['/api/product/detail/', '/api/product/list', '/api/product/category/list']
+        const isPublicUrl = publicUrls.some(url => response.config.url.includes(url))
+        
+        if (!isPublicUrl) {
+          alert('登录已过期，请重新登录')
+          localStorage.removeItem('token')
+          localStorage.removeItem('userInfo')
+          router.push('/login')
+        } else {
+          console.error('公开接口返回401，可能是后端配置问题')
+        }
         return Promise.reject(new Error(res.message || '未登录'))
       }
       
       // 其他错误
-      alert(res.message || '操作失败')
+      console.error('API错误:', res.message, '接口:', response.config.url)
       return Promise.reject(new Error(res.message || 'Error'))
     } else {
       return res
@@ -52,10 +62,18 @@ service.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          alert('登录已过期，请重新登录')
-          localStorage.removeItem('token')
-          localStorage.removeItem('userInfo')
-          router.push('/login')
+          console.warn('HTTP 401: 未授权，接口:', error.config?.url)
+          
+          // 对于公开接口，不自动跳转
+          const publicUrls = ['/api/product/detail/', '/api/product/list', '/api/product/category/list']
+          const isPublicUrl = publicUrls.some(url => error.config?.url?.includes(url))
+          
+          if (!isPublicUrl) {
+            alert('登录已过期，请重新登录')
+            localStorage.removeItem('token')
+            localStorage.removeItem('userInfo')
+            router.push('/login')
+          }
           break
         case 403:
           alert('无权限访问')

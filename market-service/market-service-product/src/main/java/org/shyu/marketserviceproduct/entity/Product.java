@@ -1,23 +1,21 @@
-package org.shyu.marketapiproduct.dto;
+package org.shyu.marketserviceproduct.entity;
 
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
- * 商品传输对象
- * 用于服务间调用传输商品信息
+ * 商品实体
  */
 @Data
-public class ProductDTO implements Serializable {
+@TableName("t_product")
+public class Product implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 商品ID
-     */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
@@ -51,11 +49,6 @@ public class ProductDTO implements Serializable {
     private Long categoryId;
 
     /**
-     * 分类名称
-     */
-    private String categoryName;
-
-    /**
      * 状态 0:草稿 1:发布 2:已售出 3:下架
      */
     private Integer status;
@@ -66,23 +59,15 @@ public class ProductDTO implements Serializable {
     private Integer viewCount;
 
     /**
-     * 商品图片列表
-     */
-    private List<String> imageUrls;
-
-    /**
-     * 封面图片（第一张）
-     */
-    private String coverImage;
-
-    /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }
 

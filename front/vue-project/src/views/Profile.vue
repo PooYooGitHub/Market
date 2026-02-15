@@ -1,6 +1,9 @@
 <template>
   <div class="profile-container">
     <div class="profile-header">
+      <button @click="goBack" class="back-button" title="返回">
+        ← 返回
+      </button>
       <h2>个人中心</h2>
     </div>
 
@@ -8,6 +11,17 @@
       <!-- 用户信息卡片 -->
       <div class="info-card">
         <h3>基本信息</h3>
+        
+        <!-- 头像展示 -->
+        <div class="avatar-display">
+          <img 
+            :src="userInfo?.avatar || defaultAvatar" 
+            alt="用户头像"
+            @error="handleAvatarError"
+            class="avatar-image"
+          />
+        </div>
+        
         <div class="info-item">
           <label>用户名：</label>
           <span>{{ userInfo?.username }}</span>
@@ -28,7 +42,7 @@
           <label>注册时间：</label>
           <span>{{ formatDate(userInfo?.createTime) }}</span>
         </div>
-        <button @click="showEditModal = true" class="btn btn-primary">
+        <button @click="handleShowEditModal" class="btn btn-primary">
           编辑信息
         </button>
       </div>
@@ -108,13 +122,30 @@
             />
           </div>
           <div class="form-group">
-            <label for="editAvatar">头像URL</label>
-            <input
-              id="editAvatar"
-              v-model="editForm.avatar"
-              type="text"
-              placeholder="请输入头像URL"
-            />
+            <label for="editAvatar">头像</label>
+            <div class="avatar-upload-container">
+              <div class="avatar-preview" @click="triggerAvatarInput">
+                <img 
+                  :src="avatarPreview || editForm.avatar || defaultAvatar" 
+                  alt="头像预览"
+                  @error="handleAvatarError"
+                />
+                <div class="avatar-upload-overlay">
+                  <span v-if="!uploadingAvatar">点击上传</span>
+                  <span v-else>上传中...</span>
+                </div>
+              </div>
+              <input
+                ref="avatarInput"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                style="display: none"
+                @change="handleAvatarSelect"
+              />
+              <div class="avatar-upload-tip">
+                支持 JPG、PNG、GIF、WEBP 格式，最大 2MB
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" @click="showEditModal = false" class="btn btn-outline">
@@ -135,6 +166,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { updateUser, changePassword } from '@/api/user'
+import { uploadAvatar, validateImageFile } from '@/api/file'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -160,6 +192,14 @@ const passwordForm = ref({
 const showEditModal = ref(false)
 const loading = ref(false)
 
+// 头像上传相关
+const avatarInput = ref(null)
+const avatarPreview = ref('')
+const uploadingAvatar = ref(false)
+
+// 默认头像（base64 编码的灰色头像占位图）
+const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y1ZjVmNSIvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNDAiIHI9IjE1IiBmaWxsPSIjZGRkIi8+CiAgPHBhdGggZD0iTSAzMCA3MCBRIDMwIDU1IDUwIDU1IFEgNzAgNTUgNzAgNzAgTCA3MCA4MCBRIDcwIDkwIDUwIDkwIFEgMzAgOTAgMzAgODAgWiIgZmlsbD0iI2RkZCIvPgo8L3N2Zz4='
+
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -174,6 +214,71 @@ const initEditForm = () => {
     email: userInfo.value?.email || '',
     avatar: userInfo.value?.avatar || ''
   }
+  // 清空头像预览
+  avatarPreview.value = ''
+}
+
+// 触发头像选择
+const triggerAvatarInput = () => {
+  if (!uploadingAvatar.value) {
+    avatarInput.value?.click()
+  }
+}
+
+// 头像选择处理
+const handleAvatarSelect = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  
+  // 验证文件
+  const validation = validateImageFile(file, { maxSize: 2 })
+  if (!validation.valid) {
+    alert(validation.message)
+    event.target.value = ''
+    return
+  }
+  
+  // 创建本地预览
+  avatarPreview.value = URL.createObjectURL(file)
+  
+  // 上传头像
+  uploadingAvatar.value = true
+  
+  try {
+    const res = await uploadAvatar(file)
+    
+    if (res.code === 200) {
+      // 上传成功，更新表单中的头像URL
+      console.log('头像上传成功:', res.data)
+      editForm.value.avatar = res.data
+      // 清空本地预览，显示服务器上的图片
+      URL.revokeObjectURL(avatarPreview.value)
+      avatarPreview.value = ''
+      alert('头像上传成功！请点击保存按钮完成更新')
+    } else {
+      throw new Error(res.message || '上传失败')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    alert(error.message || '头像上传失败，请重试')
+    // 恢复原头像
+    URL.revokeObjectURL(avatarPreview.value)
+    avatarPreview.value = ''
+  } finally {
+    uploadingAvatar.value = false
+    event.target.value = ''
+  }
+}
+
+// 头像加载失败处理
+const handleAvatarError = (e) => {
+  // 防止无限循环：如果已经是默认头像，就移除 error 事件监听
+  if (e.target.src === defaultAvatar || e.target.src.startsWith('data:image/svg')) {
+    e.target.onerror = null
+    return
+  }
+  // 设置为默认头像
+  e.target.src = defaultAvatar
 }
 
 // 更新用户信息
@@ -181,12 +286,20 @@ const handleUpdateInfo = async () => {
   loading.value = true
   
   try {
+    console.log('提交的表单数据:', editForm.value)
     const res = await updateUser(editForm.value)
     
     if (res.code === 200) {
+      console.log('更新成功，后端返回:', res.data)
       alert('更新成功')
-      // 更新本地用户信息
-      userStore.updateUserInfo(res.data)
+      // 重新获取最新的用户信息
+      await userStore.getUserInfo()
+      console.log('更新后的用户信息:', userStore.userInfo)
+      // 清空预览
+      if (avatarPreview.value) {
+        URL.revokeObjectURL(avatarPreview.value)
+        avatarPreview.value = ''
+      }
       showEditModal.value = false
     } else {
       alert(res.message || '更新失败')
@@ -239,6 +352,11 @@ const handleLogout = () => {
   }
 }
 
+// 返回上一页
+const goBack = () => {
+  router.push('/')
+}
+
 // 页面加载时初始化
 onMounted(() => {
   initEditForm()
@@ -269,11 +387,35 @@ const handleShowEditModal = () => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .profile-header h2 {
   margin: 0;
   color: #333;
+  flex: 1;
+}
+
+.back-button {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.back-button:hover {
+  background: #e8e8e8;
+  border-color: #667eea;
+  color: #667eea;
 }
 
 .profile-content {
@@ -295,6 +437,76 @@ const handleShowEditModal = () => {
   font-size: 18px;
   border-bottom: 2px solid #667eea;
   padding-bottom: 10px;
+}
+
+/* 头像展示 */
+.avatar-display {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.avatar-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #667eea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 头像上传 */
+.avatar-upload-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-preview {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid #ddd;
+  transition: all 0.3s;
+}
+
+.avatar-preview:hover {
+  border-color: #667eea;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  color: white;
+  font-size: 14px;
+}
+
+.avatar-preview:hover .avatar-upload-overlay {
+  opacity: 1;
+}
+
+.avatar-upload-tip {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
 }
 
 .info-item {
