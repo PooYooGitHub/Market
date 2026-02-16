@@ -7,6 +7,7 @@ import ProductList from '@/views/ProductList.vue'
 import ProductDetail from '@/views/ProductDetail.vue'
 import ProductForm from '@/views/ProductForm.vue'
 import MyProducts from '@/views/MyProducts.vue'
+import Messages from '@/views/Messages.vue'
 
 // 路由配置
 const routes = [
@@ -86,6 +87,16 @@ const routes = [
     component: MyProducts,
     meta: {
       title: '我的商品',
+      requiresAuth: true
+    }
+  },
+  // 消息相关路由
+  {
+    path: '/messages',
+    name: 'Messages',
+    component: Messages,
+    meta: {
+      title: '消息',
       requiresAuth: true
     }
   }

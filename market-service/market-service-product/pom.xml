@@ -17,6 +17,12 @@
             <groupId>org.shyu</groupId>
             <artifactId>market-api-product</artifactId>
         </dependency>
+
+        <!-- 用户服务API - 用于Feign调用获取用户信息 -->
+        <dependency>
+            <groupId>org.shyu</groupId>
+            <artifactId>market-api-user</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

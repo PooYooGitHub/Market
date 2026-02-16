@@ -1,15 +1,22 @@
 package org.shyu.marketserviceproduct;
+
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+
+/**
+ * 商品服务启动类
+ */
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackages = {"org.shyu.marketapiuser.feign"})
 @MapperScan("org.shyu.marketserviceproduct.mapper")
 public class MarketServiceProductApplication {
+
     public static void main(String[] args) {
         SpringApplication.run(MarketServiceProductApplication.class, args);
     }
+
 }

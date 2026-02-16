@@ -4,8 +4,8 @@ import router from '@/router'
 
 // 创建 axios 实例
 const service = axios.create({
-  baseURL: 'http://localhost:9000', // API 网关地址
-  timeout: 10000 // 请求超时时间
+  baseURL: 'http://localhost:9901', // API 网关地址
+  timeout: 30000 // 请求超时时间（改为30秒，避免RocketMQ发送消息时超时）
 })
 
 // 请求拦截器：自动添加 Token

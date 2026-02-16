@@ -3,7 +3,31 @@
 </template>
 
 <script setup>
-// App 组件只负责渲染路由视图
+import { watch, onMounted, onUnmounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import websocketService from '@/utils/websocket'
+
+const userStore = useUserStore()
+
+// 监听用户登录状态
+watch(
+  () => userStore.isLoggedIn,
+  (isLoggedIn) => {
+    if (isLoggedIn && userStore.userInfo?.id) {
+      // 用户登录，建立 WebSocket 连接
+      websocketService.connect(userStore.userInfo.id)
+    } else {
+      // 用户登出，关闭 WebSocket 连接
+      websocketService.close()
+    }
+  },
+  { immediate: true }
+)
+
+// 组件卸载时关闭 WebSocket 连接
+onUnmounted(() => {
+  websocketService.close()
+})
 </script>
 
 <style>

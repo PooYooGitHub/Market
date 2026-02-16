@@ -9,8 +9,11 @@ import org.springframework.web.bind.annotation.*;
 /**
  * User Service Feign Client
  * Used by Auth Service to call User Service
+ *
+ * 注意：Feign调用是服务间直接调用，不经过Gateway
+ * 所以path应该是 /user，而不是 /api/user（/api是Gateway路由前缀）
  */
-@FeignClient(name = "market-service-user", path = "/api/user")
+@FeignClient(name = "market-service-user", path = "/user")
 public interface UserFeignClient {
 
     /**

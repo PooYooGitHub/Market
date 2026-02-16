@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: market-service-message
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8849
+      config:
+        server-addr: localhost:8849
+        file-extension: yml
+

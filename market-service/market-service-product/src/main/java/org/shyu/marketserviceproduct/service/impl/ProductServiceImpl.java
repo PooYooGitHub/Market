@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.shyu.marketapiuser.dto.UserDTO;
+import org.shyu.marketapiuser.feign.UserFeignClient;
 import org.shyu.marketcommon.exception.BusinessException;
+import org.shyu.marketcommon.result.Result;
 import org.shyu.marketserviceproduct.dto.ProductPublishRequest;
 import org.shyu.marketserviceproduct.dto.ProductQueryRequest;
 import org.shyu.marketserviceproduct.dto.ProductUpdateRequest;
@@ -40,6 +43,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private CategoryService categoryService;
+
+    @Autowired
+    private UserFeignClient userFeignClient;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -240,8 +246,25 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
         vo.setImageUrls(imageUrls);
 
-        // 这里应该调用 User 服务获取卖家信息，暂时简化
-        // TODO: 通过 Feign 调用 User 服务
+        // 通过 Feign 调用 User 服务获取卖家信息
+        try {
+            Result<UserDTO> userResult = userFeignClient.getUserById(product.getSellerId());
+            if (userResult != null && userResult.getCode() == 200 && userResult.getData() != null) {
+                UserDTO userDTO = userResult.getData();
+                ProductDetailVO.SellerInfo sellerInfo = new ProductDetailVO.SellerInfo();
+                sellerInfo.setId(userDTO.getId());
+                sellerInfo.setUsername(userDTO.getUsername());
+                sellerInfo.setNickname(userDTO.getNickname());
+                sellerInfo.setAvatar(userDTO.getAvatar());
+                vo.setSeller(sellerInfo);
+                log.debug("成功获取卖家信息: userId={}, username={}", userDTO.getId(), userDTO.getUsername());
+            } else {
+                log.warn("获取卖家信息失败: sellerId={}, result={}", product.getSellerId(), userResult);
+            }
+        } catch (Exception e) {
+            log.error("调用User服务获取卖家信息失败: sellerId={}", product.getSellerId(), e);
+            // 获取卖家信息失败不影响商品详情展示，继续返回
+        }
 
         return vo;
     }

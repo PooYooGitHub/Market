@@ -70,6 +70,14 @@ spring:
           filters:
             - StripPrefix=1
 
+        # 消息服务路由
+        - id: market-service-message
+          uri: lb://market-service-message
+          predicates:
+            - Path=/api/message/**
+          filters:
+            - StripPrefix=1
+
 
   # Redis 配置（用于验证 Token）
   redis:
@@ -85,7 +93,7 @@ spring:
         max-wait: -1ms
 
 server:
-  port: 9000  # Gateway使用9000端口
+  port: 9901  # Gateway使用9901端口
 
 # Gateway 认证白名单配置
 gateway:

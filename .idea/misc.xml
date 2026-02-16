@@ -28,6 +28,7 @@
         <option value="$PROJECT_DIR$/market-service/market-service-arbitration/pom.xml" />
         <option value="$PROJECT_DIR$/market-service/market-service-file/pom.xml" />
         <option value="$PROJECT_DIR$/market-service/market-service-admin/pom.xml" />
+        <option value="$PROJECT_DIR$/market-service/market-service-message/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">

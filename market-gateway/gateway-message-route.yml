@@ -1,0 +1,24 @@
+# 消息服务路由配置（添加到 Nacos 的 market-gateway.yml 配置中）
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        # ... 其他路由配置 ...
+
+        # 消息服务路由
+        - id: market-service-message
+          uri: lb://market-service-message
+          predicates:
+            - Path=/api/message/**
+          filters:
+            - StripPrefix=1
+
+        # WebSocket 路由 (需要特殊处理)
+        - id: market-service-message-ws
+          uri: lb:ws://market-service-message
+          predicates:
+            - Path=/api/ws/**
+          filters:
+            - StripPrefix=1
+

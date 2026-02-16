@@ -10,6 +10,7 @@
           <template v-if="userStore.isLoggedIn">
             <router-link to="/product/publish" class="nav-link">发布商品</router-link>
             <router-link to="/my-products" class="nav-link">我的商品</router-link>
+            <router-link to="/messages" class="nav-link">消息</router-link>
             <span class="welcome">{{ userStore.nickname || userStore.username }}</span>
             <router-link to="/profile" class="nav-link">个人中心</router-link>
             <button @click="handleLogout" class="nav-button">退出登录</button>

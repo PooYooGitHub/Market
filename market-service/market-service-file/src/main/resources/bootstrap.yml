@@ -20,9 +20,9 @@ server:
 
 # MinIO 配置
 minio:
-  endpoint: http://localhost:9001
+  endpoint: http://localhost:9900
   access-key: admin
-  secret-key: 3083446265@qq.com
+  secret-key: minioadmin123
   bucket:
     product: market-product      # 商品图片桶
     avatar: market-avatar        # 用户头像桶

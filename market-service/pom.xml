@@ -20,13 +20,13 @@
         <module>market-service-user</module>
         <module>market-service-product</module>
         <module>market-service-trade</module>
+        <module>market-service-file</module>
+        <module>market-service-message</module>
 
         <!-- 扩展服务（待开发） -->
         <!--
-        <module>market-service-message</module>
         <module>market-service-credit</module>
         <module>market-service-arbitration</module>
-        <module>market-service-file</module>
         <module>market-service-admin</module>
         -->
     </modules>
