@@ -1,91 +1,129 @@
 <template>
   <div class="login-container">
     <div class="login-box">
-      <h2 class="title">校园跳蚤市场</h2>
-      <h3 class="subtitle">用户登录</h3>
-      
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="username">用户名</label>
-          <input
-            id="username"
-            v-model="loginForm.username"
-            type="text"
-            placeholder="请输入用户名"
-            required
-            autocomplete="username"
-          />
-        </div>
+      <div class="header">
+        <el-icon class="logo-icon" size="48" color="#667eea">
+          <ShoppingBag />
+        </el-icon>
+        <h2 class="title">校园跳蚤市场</h2>
+        <p class="subtitle">欢迎登录</p>
+      </div>
 
-        <div class="form-group">
-          <label for="password">密码</label>
-          <input
-            id="password"
+      <el-form
+        ref="loginFormRef"
+        :model="loginForm"
+        :rules="loginRules"
+        @submit.prevent="handleLogin"
+        class="login-form"
+        size="large"
+      >
+        <el-form-item prop="username">
+          <el-input
+            v-model="loginForm.username"
+            placeholder="请输入用户名"
+            :prefix-icon="User"
+            clearable
+            @keyup.enter="handleLogin"
+          />
+        </el-form-item>
+
+        <el-form-item prop="password">
+          <el-input
             v-model="loginForm.password"
             type="password"
             placeholder="请输入密码"
-            required
-            autocomplete="current-password"
+            :prefix-icon="Lock"
+            show-password
+            @keyup.enter="handleLogin"
           />
-        </div>
+        </el-form-item>
 
-        <button type="submit" class="login-button" :disabled="loading">
-          {{ loading ? '登录中...' : '登录' }}
-        </button>
+        <el-form-item>
+          <el-button
+            type="primary"
+            class="login-button"
+            :loading="loading"
+            @click="handleLogin"
+          >
+            <el-icon v-if="!loading"><Right /></el-icon>
+            {{ loading ? '登录中...' : '立即登录' }}
+          </el-button>
+        </el-form-item>
 
         <div class="link-group">
-          <router-link to="/register" class="link">还没有账号？立即注册</router-link>
+          <el-link type="primary" :underline="false" @click="$router.push('/register')">
+            <el-icon><UserFilled /></el-icon>
+            还没有账号？立即注册
+          </el-link>
         </div>
-      </form>
+      </el-form>
+    </div>
+
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+      <div class="circle circle-1"></div>
+      <div class="circle circle-2"></div>
+      <div class="circle circle-3"></div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+import { User, Lock, Right, UserFilled, ShoppingBag } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 
+// 表单引用
+const loginFormRef = ref()
+
 // 表单数据
-const loginForm = ref({
+const loginForm = reactive({
   username: '',
   password: ''
 })
+
+// 表单验证规则
+const loginRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, max: 20, message: '用户名长度在2-20个字符', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '密码长度在6-20个字符', trigger: 'blur' }
+  ]
+}
 
 // 加载状态
 const loading = ref(false)
 
 // 处理登录
 const handleLogin = async () => {
-  // 前端验证
-  if (!loginForm.value.username.trim()) {
-    alert('请输入用户名')
-    return
-  }
-  
-  if (!loginForm.value.password) {
-    alert('请输入密码')
-    return
-  }
-
-  loading.value = true
+  if (!loginFormRef.value) return
 
   try {
-    const result = await userStore.login(loginForm.value)
-    
+    // 表单验证
+    await loginFormRef.value.validate()
+
+    loading.value = true
+
+    const result = await userStore.login(loginForm)
+
     if (result.success) {
-      alert('登录成功')
+      ElMessage.success('登录成功')
       // 跳转到首页
       router.push('/')
     } else {
-      alert(result.message || '登录失败')
+      ElMessage.error(result.message || '登录失败')
     }
   } catch (error) {
     console.error('登录失败:', error)
-    alert('登录失败，请稍后重试')
+    ElMessage.error('登录失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -100,30 +138,44 @@ const handleLogin = async () => {
   align-items: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
 
 .login-box {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  padding: 40px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 48px;
   width: 100%;
   max-width: 420px;
+  position: relative;
+  z-index: 10;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.logo-icon {
+  margin-bottom: 16px;
 }
 
 .title {
-  text-align: center;
-  color: #333;
+  color: #1f2937;
   font-size: 28px;
-  margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.025em;
 }
 
 .subtitle {
-  text-align: center;
-  color: #666;
-  font-size: 18px;
-  margin-bottom: 30px;
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
   font-weight: 400;
 }
 
@@ -131,72 +183,124 @@ const handleLogin = async () => {
   width: 100%;
 }
 
-.form-group {
-  margin-bottom: 20px;
+.login-form .el-form-item {
+  margin-bottom: 24px;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 14px;
-  font-weight: 500;
+.login-form .el-input {
+  --el-input-height: 48px;
 }
 
-.form-group input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.3s;
-  box-sizing: border-box;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.login-form .el-input__wrapper {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .login-button {
   width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
+  height: 48px;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.login-button:hover:not(:disabled) {
+.login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.login-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
 }
 
 .link-group {
-  margin-top: 20px;
+  margin-top: 32px;
   text-align: center;
 }
 
-.link {
-  color: #667eea;
-  text-decoration: none;
+.link-group .el-link {
   font-size: 14px;
-  transition: color 0.3s;
+  font-weight: 500;
 }
 
-.link:hover {
-  color: #764ba2;
-  text-decoration: underline;
+.link-group .el-link .el-icon {
+  margin-right: 4px;
+}
+
+/* 背景装饰 */
+.bg-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite;
+}
+
+.circle-1 {
+  width: 200px;
+  height: 200px;
+  top: -50px;
+  left: -50px;
+  animation-delay: 0s;
+}
+
+.circle-2 {
+  width: 150px;
+  height: 150px;
+  bottom: -30px;
+  right: -30px;
+  animation-delay: 2s;
+}
+
+.circle-3 {
+  width: 100px;
+  height: 100px;
+  top: 50%;
+  right: 10%;
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .login-box {
+    padding: 32px 24px;
+    margin: 16px;
+    border-radius: 16px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+}
+
+/* 暗色模式适配 */
+.dark .login-box {
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.dark .title {
+  color: #f9fafb;
+}
+
+.dark .subtitle {
+  color: #d1d5db;
 }
 </style>

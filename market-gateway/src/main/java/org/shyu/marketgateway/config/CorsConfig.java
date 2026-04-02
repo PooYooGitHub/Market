@@ -21,6 +21,8 @@ public class CorsConfig {
         // 允许前端域名跨域
         config.addAllowedOriginPattern("http://localhost:5173");
         config.addAllowedOriginPattern("http://127.0.0.1:5173");
+        config.addAllowedOriginPattern("http://localhost:5174");
+        config.addAllowedOriginPattern("http://127.0.0.1:5174");
 
         // 允许所有请求头
         config.addAllowedHeader("*");

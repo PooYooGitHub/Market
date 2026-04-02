@@ -75,9 +75,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
             log.debug("Token 验证通过，userId: {}", userId);
 
-            // 4. 将 userId 放入 Header - 下游服务可直接使用
+            // 4. 将 userId 和 token 放入 Header - 下游服务可直接使用
             ServerHttpRequest request = exchange.getRequest().mutate()
                     .header("X-User-Id", userId)
+                    .header("satoken", token)  // 传递原始token给下游服务，Sa-Token需要
                     .build();
 
             // 5. 继续执行过滤器链

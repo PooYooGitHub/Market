@@ -13,7 +13,7 @@ import request from '@/utils/request'
  */
 export function register(data) {
   return request({
-    url: '/api/user/auth/register',  // 修正为正确的认证接口路径
+    url: '/api/user/register',  // 根据对接文档修正为正确路径
     method: 'post',
     data
   })

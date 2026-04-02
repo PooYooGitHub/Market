@@ -10,8 +10,9 @@ spring:
         server-addr: 127.0.0.1:8849
         username: nacos
         password: nacos
+        ip: 127.0.0.1
         # 配置 Nacos 连接超时和重试
-        naming-load-cache-at-start: true  # 启动时加载服务列表
+        naming-load-cache-at-start: false  # 不加载本地缓存，避免使用过期IP
         naming-polling-thread-count: 1  # 轮询线程数
         # 使用 HTTP 长轮询而不是 gRPC (避免超时)
         naming-use-endpoint-parsing-rule: false
@@ -24,6 +25,11 @@ spring:
         username: nacos
         password: nacos
         timeout: 3000
+    loadbalancer:
+      cache:
+        enabled: true
+        ttl: 5s  # 服务实例缓存5秒，避免长时间缓存过期IP
+        capacity: 256
     gateway:
       discovery:
         locator:
@@ -75,6 +81,14 @@ spring:
           uri: lb://market-service-message
           predicates:
             - Path=/api/message/**
+          filters:
+            - StripPrefix=1
+
+        # 信用服务路由
+        - id: market-service-credit
+          uri: lb://market-service-credit
+          predicates:
+            - Path=/api/credit/**,/api/evaluation/**
           filters:
             - StripPrefix=1
 
