@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.shyu.marketservicecredit.mapper.EvaluationMapper">
+
+    <!-- 分页查询用户收到的评价 -->
+    <select id="selectReceivedEvaluations" resultType="org.shyu.marketapicredit.vo.EvaluationVO">
+        SELECT
+            e.id,
+            e.order_id as orderId,
+            e.evaluator_id as evaluatorId,
+            e.target_id as targetId,
+            e.score,
+            e.content as comment,
+            e.create_time as createTime,
+            '' as evaluatorName,
+            '' as evaluatorAvatar,
+            '' as targetName,
+            '' as targetAvatar,
+            '' as productTitle,
+            '' as productImage,
+            '' as orderNo
+        FROM t_evaluation e
+        WHERE e.target_id = #{userId}
+        ORDER BY e.create_time DESC
+    </select>
+
+    <!-- 分页查询用户给出的评价 -->
+    <select id="selectGivenEvaluations" resultType="org.shyu.marketapicredit.vo.EvaluationVO">
+        SELECT
+            e.id,
+            e.order_id as orderId,
+            e.evaluator_id as evaluatorId,
+            e.target_id as targetId,
+            e.score,
+            e.content as comment,
+            e.create_time as createTime,
+            '' as evaluatorName,
+            '' as evaluatorAvatar,
+            '' as targetName,
+            '' as targetAvatar,
+            '' as productTitle,
+            '' as productImage,
+            '' as orderNo
+        FROM t_evaluation e
+        WHERE e.evaluator_id = #{userId}
+        ORDER BY e.create_time DESC
+    </select>
+
+</mapper>

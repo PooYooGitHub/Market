@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.shyu.marketservicearbitration.mapper.ArbitrationMapper">
+
+    <!-- 查询用户的仲裁申请分页列表 -->
+    <select id="selectUserArbitrationPage" resultType="org.shyu.marketservicearbitration.entity.ArbitrationEntity">
+        SELECT * FROM t_arbitration
+        WHERE applicant_id = #{userId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询管理员的仲裁处理分页列表 -->
+    <select id="selectAdminArbitrationPage" resultType="org.shyu.marketservicearbitration.entity.ArbitrationEntity">
+        SELECT * FROM t_arbitration
+        <where>
+            <if test="handlerId != null">
+                AND handler_id = #{handlerId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询仲裁统计数据 -->
+    <select id="selectArbitrationStats" resultType="org.shyu.marketservicearbitration.vo.ArbitrationStatsVO">
+        SELECT
+            DATE(create_time) as date,
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as pendingCount,
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as processingCount,
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as completedCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as rejectedCount
+        FROM t_arbitration
+        WHERE create_time BETWEEN #{startTime} AND #{endTime}
+        GROUP BY DATE(create_time)
+        ORDER BY date DESC
+    </select>
+
+    <!-- 查询用户仲裁统计 -->
+    <select id="selectUserArbitrationStats" resultType="org.shyu.marketservicearbitration.vo.ArbitrationStatsVO">
+        SELECT
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as successfulCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as rejectedCount,
+            ROUND(
+                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2
+            ) as successRate
+        FROM t_arbitration
+        WHERE applicant_id = #{userId}
+    </select>
+
+    <!-- 查询订单是否已有仲裁申请 -->
+    <select id="selectByOrderAndApplicant" resultType="org.shyu.marketservicearbitration.entity.ArbitrationEntity">
+        SELECT * FROM t_arbitration
+        WHERE order_id = #{orderId} AND applicant_id = #{applicantId}
+        LIMIT 1
+    </select>
+
+</mapper>

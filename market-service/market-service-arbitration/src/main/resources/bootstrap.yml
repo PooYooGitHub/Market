@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: market-service-arbitration
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        # namespace: dev  # 暂时注释掉，使用默认命名空间
+        group: DEFAULT_GROUP
+      config:
+        server-addr: localhost:8848
+        # namespace: dev  # 暂时注释掉，使用默认命名空间
+        group: DEFAULT_GROUP
+        file-extension: yml
+        shared-configs:
+          - dataId: common.yml
+            group: DEFAULT_GROUP
+            refresh: true

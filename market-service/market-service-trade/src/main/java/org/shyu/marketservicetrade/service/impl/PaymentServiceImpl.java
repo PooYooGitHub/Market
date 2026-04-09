@@ -1,0 +1,581 @@
+package org.shyu.marketservicetrade.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.shyu.marketapiproduct.dto.ProductDTO;
+import org.shyu.marketapiproduct.feign.ProductFeignClient;
+import org.shyu.marketapiuser.dto.UserDTO;
+import org.shyu.marketapiuser.feign.UserFeignClient;
+import org.shyu.marketcommon.exception.BusinessException;
+import org.shyu.marketcommon.model.PageQuery;
+import org.shyu.marketservicetrade.dto.CreatePaymentRequest;
+import org.shyu.marketservicetrade.dto.PaymentQueryDTO;
+import org.shyu.marketservicetrade.dto.RefundRequest;
+import org.shyu.marketservicetrade.entity.Order;
+import org.shyu.marketservicetrade.entity.Payment;
+import org.shyu.marketservicetrade.enums.OrderStatus;
+import org.shyu.marketservicetrade.enums.PaymentMethod;
+import org.shyu.marketservicetrade.enums.PaymentStatus;
+import org.shyu.marketservicetrade.mapper.PaymentMapper;
+import org.shyu.marketservicetrade.service.OrderService;
+import org.shyu.marketservicetrade.service.PaymentService;
+import org.shyu.marketservicetrade.vo.PaymentVO;
+import org.shyu.marketservicetrade.vo.UserBalanceVO;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+/**
+ * 支付服务实现
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> implements PaymentService {
+
+    private final OrderService orderService;
+    private final ProductFeignClient productFeignClient;
+    private final UserFeignClient userFeignClient;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentVO createPayment(CreatePaymentRequest request, Long userId) {
+        // 1. 查询订单信息
+        Order order = orderService.getById(request.getOrderId());
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+
+        // 2. 验证订单状态
+        if (!order.getStatus().equals(OrderStatus.WAIT_PAY.getCode())) {
+            throw new BusinessException("订单状态不允许支付");
+        }
+
+        // 3. 验证订单归属
+        if (!order.getBuyerId().equals(userId)) {
+            throw new BusinessException("只能支付自己的订单");
+        }
+
+        // 4. 验证金额
+        if (request.getAmount().compareTo(order.getTotalAmount()) != 0) {
+            throw new BusinessException("支付金额与订单金额不符");
+        }
+
+        // 5. 检查是否已有待支付记录
+        Payment existPayment = lambdaQuery()
+                .eq(Payment::getOrderId, request.getOrderId())
+                .eq(Payment::getStatus, PaymentStatus.WAIT_PAY.getCode())
+                .one();
+
+        if (existPayment != null) {
+            // 返回已有的支付记录
+            return buildPaymentVO(existPayment, order);
+        }
+
+        // 6. 创建支付记录
+        Payment payment = new Payment();
+        payment.setPaymentNo(generatePaymentNo());
+        payment.setOrderId(order.getId());
+        payment.setOrderNo(order.getOrderNo());
+        payment.setUserId(userId);
+        payment.setAmount(request.getAmount());
+        payment.setPaymentMethod(request.getPaymentMethod());
+        payment.setStatus(PaymentStatus.WAIT_PAY.getCode());
+        payment.setDescription("商品购买支付 - " + order.getOrderNo());
+
+        save(payment);
+
+        log.info("创建支付记录成功，paymentNo: {}, orderId: {}", payment.getPaymentNo(), order.getId());
+
+        return buildPaymentVO(payment, order);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentVO executePayment(Long paymentId, Long userId) {
+        // 1. 查询支付记录
+        Payment payment = getById(paymentId);
+        if (payment == null) {
+            throw new BusinessException("支付记录不存在");
+        }
+
+        // 2. 验证用户权限
+        if (!payment.getUserId().equals(userId)) {
+            throw new BusinessException("无权操作此支付记录");
+        }
+
+        // 3. 验证支付状态
+        if (!payment.getStatus().equals(PaymentStatus.WAIT_PAY.getCode())) {
+            throw new BusinessException("支付记录状态异常");
+        }
+
+        // 4. 模拟支付处理
+        boolean paymentSuccess = simulatePayment(payment);
+
+        if (paymentSuccess) {
+            // 5. 更新支付记录状态
+            payment.setStatus(PaymentStatus.SUCCESS.getCode());
+            payment.setPaidTime(LocalDateTime.now());
+            payment.setThirdPartyNo(generateThirdPartyNo(payment.getPaymentMethod()));
+            updateById(payment);
+
+            // 6. 更新订单状态
+            orderService.payOrder(payment.getOrderId(), userId);
+
+            log.info("支付成功，paymentNo: {}, orderId: {}", payment.getPaymentNo(), payment.getOrderId());
+        } else {
+            // 支付失败
+            payment.setStatus(PaymentStatus.FAILED.getCode());
+            updateById(payment);
+
+            log.warn("支付失败，paymentNo: {}, orderId: {}", payment.getPaymentNo(), payment.getOrderId());
+            throw new BusinessException("支付失败，请重试");
+        }
+
+        // 7. 查询订单信息并返回
+        Order order = orderService.getById(payment.getOrderId());
+        return buildPaymentVO(payment, order);
+    }
+
+    @Override
+    public PaymentVO getPaymentStatus(String paymentId) {
+        Payment payment = lambdaQuery()
+                .eq(Payment::getId, paymentId)
+                .or()
+                .eq(Payment::getPaymentNo, paymentId)
+                .one();
+
+        if (payment == null) {
+            throw new BusinessException("支付记录不存在");
+        }
+
+        Order order = orderService.getById(payment.getOrderId());
+        return buildPaymentVO(payment, order);
+    }
+
+    @Override
+    public PaymentVO getPaymentDetail(Long paymentId, Long userId) {
+        Payment payment = getById(paymentId);
+        if (payment == null) {
+            throw new BusinessException("支付记录不存在");
+        }
+
+        // 验证权限（买家可以查看）
+        Order order = orderService.getById(payment.getOrderId());
+        if (order == null || (!order.getBuyerId().equals(userId) && !order.getSellerId().equals(userId))) {
+            throw new BusinessException("无权查看此支付记录");
+        }
+
+        return buildPaymentVO(payment, order);
+    }
+
+    @Override
+    public PaymentVO getPaymentByOrderId(Long orderId) {
+        Payment payment = lambdaQuery()
+                .eq(Payment::getOrderId, orderId)
+                .orderByDesc(Payment::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+
+        if (payment == null) {
+            return null;
+        }
+
+        Order order = orderService.getById(orderId);
+        return buildPaymentVO(payment, order);
+    }
+
+    @Override
+    public IPage<PaymentVO> getPaymentHistory(PaymentQueryDTO queryDTO, PageQuery pageQuery) {
+        LambdaQueryWrapper<Payment> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Payment::getUserId, queryDTO.getUserId());
+
+        // 状态筛选
+        if (StringUtils.hasText(queryDTO.getStatus())) {
+            Integer statusCode = convertStatusToCode(queryDTO.getStatus());
+            if (statusCode != null) {
+                queryWrapper.eq(Payment::getStatus, statusCode);
+            }
+        }
+
+        // 支付方式筛选
+        if (StringUtils.hasText(queryDTO.getPaymentMethod())) {
+            Integer methodCode = convertMethodToCode(queryDTO.getPaymentMethod());
+            if (methodCode != null) {
+                queryWrapper.eq(Payment::getPaymentMethod, methodCode);
+            }
+        }
+
+        queryWrapper.orderByDesc(Payment::getCreateTime);
+
+        Page<Payment> page = new Page<>(pageQuery.getPageNum(), pageQuery.getPageSize());
+        IPage<Payment> paymentPage = page(page, queryWrapper);
+
+        // 转换为VO
+        Page<PaymentVO> voPage = new Page<>(paymentPage.getCurrent(), paymentPage.getSize(), paymentPage.getTotal());
+        List<PaymentVO> voList = new ArrayList<>();
+
+        for (Payment payment : paymentPage.getRecords()) {
+            try {
+                Order order = orderService.getById(payment.getOrderId());
+                PaymentVO vo = buildPaymentVO(payment, order);
+                voList.add(vo);
+            } catch (Exception e) {
+                log.warn("构建支付VO失败，paymentId: {}", payment.getId(), e);
+            }
+        }
+
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    @Override
+    public UserBalanceVO getUserBalance(Long userId) {
+        // 模拟用户余额数据（毕业设计演示用）
+        UserBalanceVO balanceVO = new UserBalanceVO();
+        balanceVO.setUserId(userId);
+
+        // 为不同用户设置不同的模拟余额
+        BigDecimal balance = BigDecimal.valueOf(1000.00 + (userId % 10) * 100);
+        balanceVO.setBalance(balance);
+        balanceVO.setFrozenBalance(BigDecimal.ZERO);
+        balanceVO.setTotalBalance(balance);
+
+        return balanceVO;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentVO payWithBalance(Long orderId, String amount, String password, Long userId) {
+        // 1. 验证支付密码（演示用，任意6位数字即可）
+        if (!StringUtils.hasText(password) || password.length() != 6 || !password.matches("\\d{6}")) {
+            throw new BusinessException("支付密码格式错误，请输入6位数字");
+        }
+
+        // 2. 查询用户余额
+        UserBalanceVO userBalance = getUserBalance(userId);
+        BigDecimal payAmount = new BigDecimal(amount);
+
+        if (userBalance.getBalance().compareTo(payAmount) < 0) {
+            throw new BusinessException("余额不足");
+        }
+
+        // 3. 创建支付记录
+        CreatePaymentRequest request = new CreatePaymentRequest();
+        request.setOrderId(orderId);
+        request.setAmount(payAmount);
+        request.setPaymentMethod(PaymentMethod.BALANCE.getCode());
+
+        PaymentVO payment = createPayment(request, userId);
+
+        // 4. 直接执行支付（余额支付无需外部确认）
+        return executePayment(payment.getId(), userId);
+    }
+
+    @Override
+    public List<Map<String, Object>> getPaymentMethods() {
+        List<Map<String, Object>> methods = new ArrayList<>();
+
+        for (PaymentMethod method : PaymentMethod.values()) {
+            Map<String, Object> methodInfo = new HashMap<>();
+            methodInfo.put("code", method.getCode());
+            methodInfo.put("name", method.getDesc());
+            methodInfo.put("enabled", true);
+
+            // 添加支付方式图标
+            switch (method) {
+                case ALIPAY:
+                    methodInfo.put("icon", "💙");
+                    methodInfo.put("description", "安全快捷，信任之选");
+                    break;
+                case WECHAT:
+                    methodInfo.put("icon", "💚");
+                    methodInfo.put("description", "微信安全支付");
+                    break;
+                case BALANCE:
+                    methodInfo.put("icon", "🪙");
+                    methodInfo.put("description", "使用账户余额支付");
+                    break;
+                case BANK_CARD:
+                    methodInfo.put("icon", "🏦");
+                    methodInfo.put("description", "支持各大银行储蓄卡及信用卡");
+                    break;
+            }
+
+            methods.add(methodInfo);
+        }
+
+        return methods;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean requestRefund(RefundRequest request, Long userId) {
+        // 查询订单
+        Order order = orderService.getById(request.getOrderId());
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+
+        // 验证权限
+        if (!order.getBuyerId().equals(userId)) {
+            throw new BusinessException("只能申请自己订单的退款");
+        }
+
+        // 查询支付记录
+        Payment payment = lambdaQuery()
+                .eq(Payment::getOrderId, request.getOrderId())
+                .eq(Payment::getStatus, PaymentStatus.SUCCESS.getCode())
+                .one();
+
+        if (payment == null) {
+            throw new BusinessException("未找到可退款的支付记录");
+        }
+
+        // 检查退款时间限制（24小时内）
+        if (payment.getPaidTime().plusHours(24).isBefore(LocalDateTime.now())) {
+            throw new BusinessException("超过退款时限，无法申请退款");
+        }
+
+        // 模拟退款处理（实际应该调用第三方支付平台退款接口）
+        log.info("申请退款，paymentNo: {}, reason: {}", payment.getPaymentNo(), request.getReason());
+
+        // 这里可以创建退款记录表，简化演示直接返回成功
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelPayment(Long paymentId, Long userId) {
+        Payment payment = getById(paymentId);
+        if (payment == null) {
+            throw new BusinessException("支付记录不存在");
+        }
+
+        // 验证权限
+        if (!payment.getUserId().equals(userId)) {
+            throw new BusinessException("无权操作此支付记录");
+        }
+
+        // 只有待支付状态可以取消
+        if (!payment.getStatus().equals(PaymentStatus.WAIT_PAY.getCode())) {
+            throw new BusinessException("支付记录状态不允许取消");
+        }
+
+        // 标记为失败（取消）
+        payment.setStatus(PaymentStatus.FAILED.getCode());
+        updateById(payment);
+
+        log.info("取消支付，paymentNo: {}, orderId: {}", payment.getPaymentNo(), payment.getOrderId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentVO simulatePaymentResult(String paymentId, String result) {
+        Payment payment = lambdaQuery()
+                .eq(Payment::getId, paymentId)
+                .or()
+                .eq(Payment::getPaymentNo, paymentId)
+                .one();
+
+        if (payment == null) {
+            throw new BusinessException("支付记录不存在");
+        }
+
+        switch (result.toLowerCase()) {
+            case "success":
+                payment.setStatus(PaymentStatus.SUCCESS.getCode());
+                payment.setPaidTime(LocalDateTime.now());
+                payment.setThirdPartyNo(generateThirdPartyNo(payment.getPaymentMethod()));
+
+                // 更新订单状态
+                try {
+                    orderService.payOrder(payment.getOrderId(), payment.getUserId());
+                } catch (Exception e) {
+                    log.error("模拟支付成功后更新订单失败", e);
+                }
+                break;
+            case "failed":
+                payment.setStatus(PaymentStatus.FAILED.getCode());
+                break;
+            case "cancel":
+            case "cancelled":
+                payment.setStatus(PaymentStatus.FAILED.getCode());
+                break;
+            default:
+                throw new BusinessException("不支持的支付结果：" + result);
+        }
+
+        updateById(payment);
+
+        Order order = orderService.getById(payment.getOrderId());
+        return buildPaymentVO(payment, order);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean handlePaymentCallback(String paymentNo, boolean success) {
+        Payment payment = lambdaQuery()
+                .eq(Payment::getPaymentNo, paymentNo)
+                .one();
+
+        if (payment == null) {
+            log.error("支付回调：找不到支付记录，paymentNo: {}", paymentNo);
+            return false;
+        }
+
+        if (success) {
+            payment.setStatus(PaymentStatus.SUCCESS.getCode());
+            payment.setPaidTime(LocalDateTime.now());
+            payment.setThirdPartyNo(generateThirdPartyNo(payment.getPaymentMethod()));
+
+            // 更新订单状态
+            try {
+                orderService.payOrder(payment.getOrderId(), payment.getUserId());
+            } catch (Exception e) {
+                log.error("支付回调更新订单失败，paymentNo: {}", paymentNo, e);
+                return false;
+            }
+        } else {
+            payment.setStatus(PaymentStatus.FAILED.getCode());
+        }
+
+        updateById(payment);
+        return true;
+    }
+
+    /**
+     * 模拟支付处理
+     */
+    private boolean simulatePayment(Payment payment) {
+        try {
+            // 模拟网络延迟
+            Thread.sleep(1000 + new Random().nextInt(2000)); // 1-3秒随机延迟
+
+            // 模拟支付成功率（80%成功率，用于演示）
+            int successRate = 80;
+            int randomNum = new Random().nextInt(100) + 1;
+
+            if (randomNum <= successRate) {
+                log.info("模拟支付成功，paymentNo: {}, method: {}",
+                    payment.getPaymentNo(), PaymentMethod.getDescByCode(payment.getPaymentMethod()));
+                return true;
+            } else {
+                log.info("模拟支付失败，paymentNo: {}, method: {}",
+                    payment.getPaymentNo(), PaymentMethod.getDescByCode(payment.getPaymentMethod()));
+                return false;
+            }
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("支付处理被中断，paymentNo: {}", payment.getPaymentNo());
+            return false;
+        }
+    }
+
+    /**
+     * 生成支付流水号
+     */
+    private String generatePaymentNo() {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String randomNum = String.valueOf(new Random().nextInt(900000) + 100000);
+        return "PAY" + timestamp + randomNum;
+    }
+
+    /**
+     * 生成第三方支付流水号
+     */
+    private String generateThirdPartyNo(Integer paymentMethod) {
+        String prefix;
+        switch (paymentMethod) {
+            case 1: prefix = "ALI"; break;
+            case 2: prefix = "WX"; break;
+            case 3: prefix = "BAL"; break;
+            case 4: prefix = "BANK"; break;
+            default: prefix = "OTHER"; break;
+        }
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String randomNum = String.valueOf(new Random().nextInt(900000) + 100000);
+        return prefix + timestamp + randomNum;
+    }
+
+    /**
+     * 状态字符串转换为代码
+     */
+    private Integer convertStatusToCode(String status) {
+        switch (status.toLowerCase()) {
+            case "pending": return PaymentStatus.WAIT_PAY.getCode();
+            case "success": return PaymentStatus.SUCCESS.getCode();
+            case "failed": return PaymentStatus.FAILED.getCode();
+            case "cancelled": return PaymentStatus.FAILED.getCode();
+            default: return null;
+        }
+    }
+
+    /**
+     * 支付方式字符串转换为代码
+     */
+    private Integer convertMethodToCode(String method) {
+        switch (method.toLowerCase()) {
+            case "alipay": return PaymentMethod.ALIPAY.getCode();
+            case "wechat": return PaymentMethod.WECHAT.getCode();
+            case "balance": return PaymentMethod.BALANCE.getCode();
+            case "bank": return PaymentMethod.BANK_CARD.getCode();
+            default: return null;
+        }
+    }
+
+    /**
+     * 构建支付VO
+     */
+    private PaymentVO buildPaymentVO(Payment payment, Order order) {
+        PaymentVO vo = new PaymentVO();
+        vo.setId(payment.getId());
+        vo.setPaymentNo(payment.getPaymentNo());
+        vo.setOrderId(payment.getOrderId());
+        vo.setOrderNo(payment.getOrderNo());
+        vo.setUserId(payment.getUserId());
+        vo.setAmount(payment.getAmount());
+        vo.setPaymentMethod(payment.getPaymentMethod());
+        vo.setPaymentMethodDesc(PaymentMethod.getDescByCode(payment.getPaymentMethod()));
+        vo.setStatus(payment.getStatus());
+        vo.setStatusDesc(PaymentStatus.getDescByCode(payment.getStatus()));
+        vo.setDescription(payment.getDescription());
+        vo.setThirdPartyNo(payment.getThirdPartyNo());
+        vo.setPaidTime(payment.getPaidTime());
+        vo.setCreateTime(payment.getCreateTime());
+        vo.setUpdateTime(payment.getUpdateTime());
+
+        // 填充订单相关信息
+        if (order != null) {
+            try {
+                // 查询商品信息
+                ProductDTO product = productFeignClient.getProductById(order.getProductId()).getData();
+                if (product != null) {
+                    vo.setProductTitle(product.getTitle());
+                    vo.setProductImage(product.getCoverImage());
+                }
+
+                // 查询卖家信息
+                UserDTO seller = userFeignClient.getUserById(order.getSellerId()).getData();
+                if (seller != null) {
+                    vo.setSellerNickname(seller.getNickname());
+                }
+            } catch (Exception e) {
+                log.warn("查询支付相关信息失败，paymentId: {}", payment.getId(), e);
+            }
+        }
+
+        return vo;
+    }
+}

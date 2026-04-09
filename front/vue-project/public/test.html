@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理系统测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            color: #67c23a;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        .debug {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .debug h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .debug ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .debug li {
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏛️ 仲裁管理系统</div>
+        <div class="status">✅ 前端服务已启动</div>
+
+        <div class="links">
+            <a href="/admin/login" class="link">管理员登录</a>
+            <a href="/admin/dashboard" class="link">工作台</a>
+            <a href="/admin/arbitration/pending" class="link">待处理案件</a>
+            <a href="/admin/statistics/overview" class="link">数据概览</a>
+        </div>
+
+        <div class="debug">
+            <h3>🔧 调试信息</h3>
+            <ul>
+                <li>前端地址: <span id="location"></span></li>
+                <li>API地址: http://localhost:8080</li>
+                <li>时间: <span id="time"></span></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 显示当前信息
+        document.getElementById('location').textContent = window.location.href;
+        document.getElementById('time').textContent = new Date().toLocaleString();
+
+        // 测试Vue应用
+        console.log('静态测试页面已加载');
+        console.log('Vue应用应该在其他路由中运行');
+    </script>
+</body>
+</html>
