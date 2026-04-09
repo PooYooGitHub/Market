@@ -17,6 +17,21 @@
             <groupId>org.shyu</groupId>
             <artifactId>market-api-trade</artifactId>
         </dependency>
+        <!-- 用户服务API（Feign调用） -->
+        <dependency>
+            <groupId>org.shyu</groupId>
+            <artifactId>market-api-user</artifactId>
+        </dependency>
+        <!-- 商品服务API（Feign调用） -->
+        <dependency>
+            <groupId>org.shyu</groupId>
+            <artifactId>market-api-product</artifactId>
+        </dependency>
+        <!-- 信用服务API（Feign调用） -->
+        <dependency>
+            <groupId>org.shyu</groupId>
+            <artifactId>market-api-credit</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

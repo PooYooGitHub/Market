@@ -76,5 +76,12 @@ public interface UserService extends IService<UserEntity> {
      * @return 统计信息
      */
     UserStatisticsVO getStatistics();
+
+    /**
+     * 获取用户的角色列表
+     * @param userId 用户ID
+     * @return 角色代码列表
+     */
+    java.util.List<String> getUserRoles(Long userId);
 }
 

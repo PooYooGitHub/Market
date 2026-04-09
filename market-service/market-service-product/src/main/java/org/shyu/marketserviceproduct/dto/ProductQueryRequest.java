@@ -50,5 +50,15 @@ public class ProductQueryRequest implements Serializable {
      * 每页条数
      */
     private Integer pageSize = 20;
+
+    /**
+     * 商品状态 (用于管理员查询)
+     */
+    private Integer status;
+
+    /**
+     * 卖家ID (用于管理员查询)
+     */
+    private Long sellerId;
 }
 

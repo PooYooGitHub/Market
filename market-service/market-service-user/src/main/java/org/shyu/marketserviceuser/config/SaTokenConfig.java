@@ -55,11 +55,26 @@ public class SaTokenConfig implements WebMvcConfigurer {
             return true;
         }
 
+        // 管理员登录接口
+        if (path.equals("/admin/login")) {
+            return true;
+        }
+
+        // 仲裁管理接口（临时）
+        if (path.startsWith("/arbitration/")) {
+            return true;
+        }
+
         // Feign 调用接口
         if (path.matches("/user/\\d+")) {  // 匹配 /user/1, /user/123 等
             return true;
         }
         if (path.equals("/user/username") || path.equals("/user/phone")) {
+            return true;
+        }
+
+        // 统计接口（供其他服务调用）
+        if (path.equals("/user/statistics")) {
             return true;
         }
 

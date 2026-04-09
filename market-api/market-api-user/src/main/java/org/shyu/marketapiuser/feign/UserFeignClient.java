@@ -49,4 +49,11 @@ public interface UserFeignClient {
     @PostMapping("/auth/validate-login")
     Result<UserDTO> validateLogin(@RequestParam("username") String username,
                                    @RequestParam("password") String password);
+
+    /**
+     * 获取用户统计数据
+     * @return 用户统计信息
+     */
+    @GetMapping("/statistics")
+    Result<Object> getUserStatistics();
 }

@@ -9,11 +9,11 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8849
+        server-addr: 127.0.0.1:8848
         ip: 127.0.0.1
         port: ${server.port}
       config:
-        server-addr: 127.0.0.1:8849
+        server-addr: 127.0.0.1:8848
         file-extension: yml
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
@@ -42,7 +42,7 @@ spring:
         max-wait: -1ms
 
 server:
-  port: 8101
+  port: 9901
 
 # MyBatis Plus 配置
 mybatis-plus:

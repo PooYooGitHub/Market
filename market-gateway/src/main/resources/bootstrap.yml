@@ -3,28 +3,34 @@ spring:
     name: market-gateway
   cloud:
     nacos:
-      server-addr: 127.0.0.1:8849
+      server-addr: 127.0.0.1:8848
       username: nacos
       password: nacos
       discovery:
-        server-addr: 127.0.0.1:8849
+        server-addr: 127.0.0.1:8848
         username: nacos
         password: nacos
         ip: 127.0.0.1
         # 配置 Nacos 连接超时和重试
         naming-load-cache-at-start: false  # 不加载本地缓存，避免使用过期IP
         naming-polling-thread-count: 1  # 轮询线程数
-        # 使用 HTTP 长轮询而不是 gRPC (避免超时)
-        naming-use-endpoint-parsing-rule: false
-        register-enabled: true
+        # 强制使用 HTTP 而不是 gRPC
+        use-only-site-interfaces: false
+        register-enabled: true  # 重新启用服务注册
         heartbeat-interval: 5000  # 心跳间隔5秒
-        timeout: 3000  # 超时时间3秒
+        timeout: 10000  # 增加超时时间到10秒
+        # 禁用gRPC，使用HTTP
+        grpc:
+          enable: false
       config:
-        server-addr: 127.0.0.1:8849
+        server-addr: 127.0.0.1:8848
         file-extension: yml
         username: nacos
         password: nacos
-        timeout: 3000
+        timeout: 10000  # 增加超时时间
+        # 禁用gRPC，使用HTTP
+        grpc:
+          enable: false
     loadbalancer:
       cache:
         enabled: true
@@ -68,6 +74,14 @@ spring:
           filters:
             - StripPrefix=1
 
+        # 支付服务路由（指向交易服务）
+        - id: market-service-payment
+          uri: lb://market-service-trade
+          predicates:
+            - Path=/api/payment/**
+          filters:
+            - StripPrefix=1
+
         # 文件服务路由
         - id: market-service-file
           uri: lb://market-service-file
@@ -84,14 +98,47 @@ spring:
           filters:
             - StripPrefix=1
 
-        # 信用服务路由
-        - id: market-service-credit
+        # 信用服务路由 - credit
+        - id: market-service-credit-api
           uri: lb://market-service-credit
           predicates:
-            - Path=/api/credit/**,/api/evaluation/**
+            - Path=/api/credit/**
           filters:
             - StripPrefix=1
 
+        # 信用服务路由 - evaluation
+        - id: market-service-evaluation-api
+          uri: lb://market-service-credit
+          predicates:
+            - Path=/api/evaluation/**
+          filters:
+            - StripPrefix=1
+
+        # 仲裁服务路由
+        - id: market-service-arbitration
+          uri: lb://market-service-arbitration
+          predicates:
+            - Path=/api/arbitration/**
+          filters:
+            - StripPrefix=1
+
+        # Feign内部接口路由 - 交易服务（不去前缀，直接转发）
+        - id: feign-trade
+          uri: lb://market-service-trade
+          predicates:
+            - Path=/feign/trade/**
+
+        # Feign内部接口路由 - 商品服务（不去前缀，直接转发）
+        - id: feign-product
+          uri: lb://market-service-product
+          predicates:
+            - Path=/feign/product/**
+
+        # Feign内部接口路由 - 用户服务（不去前缀，直接转发）
+        - id: feign-user
+          uri: lb://market-service-user
+          predicates:
+            - Path=/feign/user/**
 
   # Redis 配置（用于验证 Token）
   redis:
@@ -107,7 +154,7 @@ spring:
         max-wait: -1ms
 
 server:
-  port: 9901  # Gateway使用9901端口
+  port: 8100  # Gateway使用8100端口
 
 # Gateway 认证白名单配置
 gateway:
@@ -122,6 +169,7 @@ gateway:
       - /api/product/list
       - /api/product/detail/**
       - /api/product/category/**
+      - /api/product/statistics
       # Feign内部调用
       - /feign/**
 

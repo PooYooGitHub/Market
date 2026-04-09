@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/doc/SQL/init_product_data.sql" value="22b8f032-8dc9-48a7-ad3f-9a98fc6ae8dc" />
     <file url="file://$PROJECT_DIR$/doc/SQL/mysql-schema.sql" value="22b8f032-8dc9-48a7-ad3f-9a98fc6ae8dc" />
     <file url="file://$PROJECT_DIR$/doc/SQL/nacos.sql" value="22b8f032-8dc9-48a7-ad3f-9a98fc6ae8dc" />
   </component>

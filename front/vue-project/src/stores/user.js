@@ -1,7 +1,6 @@
 // 用户状态管理
 import { defineStore } from 'pinia'
 import { login, getCurrentUser } from '@/api/user'
-import router from '@/router'
 
 export const useUserStore = defineStore('user', {
   // 状态
@@ -14,94 +13,100 @@ export const useUserStore = defineStore('user', {
   getters: {
     // 是否已登录
     isLoggedIn: (state) => !!state.token,
-    
+
     // 用户名
     username: (state) => state.userInfo?.username || '',
-    
+
     // 昵称
     nickname: (state) => state.userInfo?.nickname || '',
-    
+
     // 头像
     avatar: (state) => state.userInfo?.avatar || '',
-    
+
     // 用户ID
     userId: (state) => state.userInfo?.id || null
   },
 
   // 方法
   actions: {
-    /**
-     * 用户登录
-     * @param {Object} loginData - 登录信息
-     * @param {string} loginData.username - 用户名
-     * @param {string} loginData.password - 密码
-     */
-    async login(loginData) {
+    // 登录
+    async login(loginForm) {
       try {
-        const res = await login(loginData)
-        
-        if (res.code === 200) {
-          // 保存 token
-          this.token = res.data.token
-          localStorage.setItem('token', res.data.token)
-          
-          // 保存用户信息
-          this.userInfo = res.data.userInfo
-          localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
-          
-          return { success: true, message: '登录成功' }
+        const response = await login(loginForm)
+
+        if (response.code === 200 && response.data?.token) {
+          this.token = response.data.token
+          this.userInfo = response.data.userInfo || {}
+
+          // 保存到本地存储
+          localStorage.setItem('token', this.token)
+          localStorage.setItem('userInfo', JSON.stringify(this.userInfo))
+
+          return { success: true, data: response.data }
         } else {
-          return { success: false, message: res.message }
+          throw new Error(response.message || '登录失败')
         }
       } catch (error) {
-        console.error('登录失败:', error)
-        return { success: false, message: '登录失败，请稍后重试' }
+        console.error('登录失败：', error.message)
+        throw error
       }
     },
 
-    /**
-     * 用户登出
-     */
+    // 获取用户信息
+    async fetchUserInfo() {
+      try {
+        const response = await getCurrentUser()
+
+        if (response.code === 200) {
+          this.userInfo = response.data
+          localStorage.setItem('userInfo', JSON.stringify(this.userInfo))
+          return this.userInfo
+        } else {
+          throw new Error(response.message || '获取用户信息失败')
+        }
+      } catch (error) {
+        console.error('获取用户信息失败：', error.message)
+        // 如果获取失败，清除本地存储
+        this.logout()
+        throw error
+      }
+    },
+
+    // 登出
     logout() {
-      // 清除状态
       this.token = ''
       this.userInfo = null
-      
+
       // 清除本地存储
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
-      
-      // 跳转到登录页
-      router.push('/login')
+
+      return true
     },
 
-    /**
-     * 获取用户信息
-     */
-    async getUserInfo() {
-      try {
-        const res = await getCurrentUser()
-        
-        if (res.code === 200) {
-          this.userInfo = res.data
-          localStorage.setItem('userInfo', JSON.stringify(res.data))
-          return { success: true, data: res.data }
-        } else {
-          return { success: false, message: res.message }
-        }
-      } catch (error) {
-        console.error('获取用户信息失败:', error)
-        return { success: false, message: '获取用户信息失败' }
-      }
-    },
-
-    /**
-     * 更新本地用户信息
-     * @param {Object} newInfo - 新的用户信息
-     */
-    updateUserInfo(newInfo) {
-      this.userInfo = { ...this.userInfo, ...newInfo }
+    // 更新用户信息
+    updateUserInfo(userInfo) {
+      this.userInfo = { ...this.userInfo, ...userInfo }
       localStorage.setItem('userInfo', JSON.stringify(this.userInfo))
+    },
+
+    // 初始化用户状态（从localStorage恢复）
+    initUserState() {
+      const token = localStorage.getItem('token')
+      const userInfo = localStorage.getItem('userInfo')
+
+      if (token) {
+        this.token = token
+      }
+
+      if (userInfo) {
+        try {
+          this.userInfo = JSON.parse(userInfo)
+        } catch (error) {
+          console.error('解析用户信息失败：', error)
+          localStorage.removeItem('userInfo')
+        }
+      }
     }
   }
 })

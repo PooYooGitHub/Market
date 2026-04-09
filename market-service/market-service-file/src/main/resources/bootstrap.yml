@@ -11,6 +11,8 @@ spring:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8849
+        ip: 127.0.0.1
+        port: ${server.port}
       config:
         server-addr: 127.0.0.1:8849
         file-extension: yml
@@ -37,6 +39,12 @@ sa-token:
   is-share: true
   token-style: uuid
   is-log: false
+  # 是否从cookie中读取token
+  is-read-cookie: false
+  # 是否从head中读取token
+  is-read-head: true
+  # token前缀
+  token-prefix: Bearer
 
 # 禁用 Swagger (File 服务不需要 API 文档)
 springfox:

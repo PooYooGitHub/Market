@@ -1,12 +1,5 @@
 <template>
   <div class="profile-container">
-    <div class="profile-header">
-      <button @click="goBack" class="back-button" title="返回">
-        ← 返回
-      </button>
-      <h2>个人中心</h2>
-    </div>
-
     <div class="profile-content">
       <!-- 用户信息卡片 -->
       <div class="info-card">
@@ -31,10 +24,6 @@
           <span>{{ userInfo?.nickname }}</span>
         </div>
         <div class="info-item">
-          <label>手机号：</label>
-          <span>{{ userInfo?.phone || '未设置' }}</span>
-        </div>
-        <div class="info-item">
           <label>邮箱：</label>
           <span>{{ userInfo?.email || '未设置' }}</span>
         </div>
@@ -45,6 +34,44 @@
         <button @click="handleShowEditModal" class="btn btn-primary">
           编辑信息
         </button>
+      </div>
+
+      <!-- 信用信息卡片 -->
+      <div class="info-card">
+        <h3>信用信息</h3>
+        <div v-if="creditInfo" class="credit-section">
+          <div class="credit-display">
+            <div class="credit-badge">
+              <div class="credit-score" :style="{ color: creditInfo.levelColor }">
+                {{ creditInfo.score }}
+              </div>
+              <div class="credit-level">{{ creditInfo.level }}</div>
+            </div>
+            <div class="credit-stats">
+              <div class="stat-item">
+                <span class="stat-label">总评价</span>
+                <span class="stat-value">{{ creditInfo.totalEvaluations }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">好评率</span>
+                <span class="stat-value">{{ creditInfo.goodRate }}%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">平均分</span>
+                <span class="stat-value">{{ creditInfo.avgScore }}</span>
+              </div>
+            </div>
+          </div>
+          <button @click="viewCreditDetail" class="btn btn-primary">
+            查看详情
+          </button>
+        </div>
+        <div v-else-if="creditInfoError" class="credit-error">
+          <p>信用信息暂时无法加载，请稍后再试</p>
+        </div>
+        <div v-else class="credit-loading">
+          <p>加载信用信息中...</p>
+        </div>
       </div>
 
       <!-- 修改密码卡片 -->
@@ -167,12 +194,17 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { updateUser, changePassword } from '@/api/user'
 import { uploadAvatar, validateImageFile } from '@/api/file'
+import { getCreditInfo } from '@/api/credit'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 // 用户信息
 const userInfo = computed(() => userStore.userInfo)
+
+// 信用信息
+const creditInfo = ref(null)
+const creditInfoError = ref(false)
 
 // 编辑表单
 const editForm = ref({
@@ -260,7 +292,17 @@ const handleAvatarSelect = async (event) => {
     }
   } catch (error) {
     console.error('头像上传失败:', error)
-    alert(error.message || '头像上传失败，请重试')
+    // 根据错误类型给出更具体的提示
+    if (error.response?.status === 500) {
+      alert('文件上传服务暂时不可用，请稍后再试')
+    } else if (error.response?.status === 413) {
+      alert('头像文件太大，请选择小于2MB的图片')
+    } else if (error.response?.status === 401) {
+      alert('登录已过期，请重新登录')
+      userStore.logout()
+    } else {
+      alert('头像上传失败，请检查网络连接或文件格式')
+    }
     // 恢复原头像
     URL.revokeObjectURL(avatarPreview.value)
     avatarPreview.value = ''
@@ -284,11 +326,11 @@ const handleAvatarError = (e) => {
 // 更新用户信息
 const handleUpdateInfo = async () => {
   loading.value = true
-  
+
   try {
     console.log('提交的表单数据:', editForm.value)
     const res = await updateUser(editForm.value)
-    
+
     if (res.code === 200) {
       console.log('更新成功，后端返回:', res.data)
       alert('更新成功')
@@ -306,7 +348,25 @@ const handleUpdateInfo = async () => {
     }
   } catch (error) {
     console.error('更新失败:', error)
-    alert('更新失败，请稍后重试')
+    // 根据错误类型给出更具体的提示
+    if (error.response?.status === 500) {
+      // 对于服务异常，提供更友好的处理
+      const confirmLocalSave = confirm('用户服务暂时不可用，是否在本地暂存修改？\n（重新登录后会恢复为服务器上的信息）')
+      if (confirmLocalSave) {
+        // 本地更新用户信息显示
+        userStore.updateUserInfo({
+          nickname: editForm.value.nickname,
+          email: editForm.value.email
+        })
+        alert('信息已在本地暂存，服务恢复后请重新保存')
+        showEditModal.value = false
+      }
+    } else if (error.response?.status === 401) {
+      alert('登录已过期，请重新登录')
+      userStore.logout()
+    } else {
+      alert('网络连接异常，请检查网络后重试')
+    }
   } finally {
     loading.value = false
   }
@@ -352,14 +412,36 @@ const handleLogout = () => {
   }
 }
 
-// 返回上一页
-const goBack = () => {
-  router.push('/')
+
+// 查看信用详情
+const viewCreditDetail = () => {
+  router.push('/credit')
+}
+
+// 加载信用信息
+const loadCreditInfo = async () => {
+  try {
+    creditInfoError.value = false
+    const response = await getCreditInfo()
+    if (response.success) {
+      creditInfo.value = response.data
+    }
+  } catch (error) {
+    creditInfoError.value = true
+    // 静默处理信用服务错误，不在控制台输出详细错误信息
+    if (error.response?.status === 500) {
+      console.warn('信用服务暂时不可用，将显示友好提示')
+    } else {
+      console.error('加载信用信息失败:', error.message || error)
+    }
+    creditInfo.value = null
+  }
 }
 
 // 页面加载时初始化
 onMounted(() => {
   initEditForm()
+  loadCreditInfo()
   // 如果没有登录，跳转到登录页
   if (!userStore.isLoggedIn) {
     router.push('/login')
@@ -378,44 +460,6 @@ const handleShowEditModal = () => {
   min-height: 100vh;
   background: #f5f5f5;
   padding: 20px;
-}
-
-.profile-header {
-  max-width: 800px;
-  margin: 0 auto 30px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.profile-header h2 {
-  margin: 0;
-  color: #333;
-  flex: 1;
-}
-
-.back-button {
-  padding: 8px 16px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  color: #666;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.back-button:hover {
-  background: #e8e8e8;
-  border-color: #667eea;
-  color: #667eea;
 }
 
 .profile-content {
@@ -527,6 +571,76 @@ const handleShowEditModal = () => {
 
 .info-item span {
   color: #333;
+}
+
+/* 信用信息样式 */
+.credit-section {
+  padding: 20px 0;
+}
+
+.credit-display {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.credit-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  min-width: 120px;
+}
+
+.credit-score {
+  font-size: 36px;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.credit-level {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.credit-stats {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
+
+.credit-stats .stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: none;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.stat-value {
+  color: #303133;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.credit-loading {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
 }
 
 .password-form .form-group {

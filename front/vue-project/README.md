@@ -1,5 +1,79 @@
-# Vue 3 + Vite
+# 校园跳蚤市场 - 仲裁管理系统
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+专注于争议解决和数据分析的简化版管理后台。
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## 功能概述
+
+本系统专门为校园跳蚤市场的仲裁管理而设计，提供专业的争议处理和数据统计功能。
+
+### 核心功能
+
+#### 🏠 工作台
+- 实时仲裁案件概览
+- 待办事项提醒
+- 关键指标监控
+- 快捷操作入口
+
+#### ⚖️ 仲裁管理
+- **待处理案件**: 新提交的仲裁申请
+- **处理中案件**: 正在调解的争议
+- **已完成案件**: 历史案件查询
+- **所有案件**: 综合案件管理
+
+#### 📊 数据统计
+- **总体概览**: 核心业务指标
+- **仲裁分析**: 专业数据分析
+- **趋势分析**: 预测与洞察
+- **报表导出**: 多格式报表
+
+### 系统特点
+
+- ✅ **专业化**: 专注仲裁业务，功能精准
+- ✅ **简洁性**: 移除冗余功能，界面清爽
+- ✅ **高效性**: 优化工作流程，提升效率
+- ✅ **数据驱动**: 完整的统计分析体系
+
+## 快速开始
+
+### 安装依赖
+```bash
+npm install
+```
+
+### 启动开发服务器
+```bash
+npm run dev
+```
+
+### 使用简化启动脚本
+```bash
+# Windows
+.\start-admin-simplified.ps1
+
+# Linux/Mac
+./start-admin-simplified.sh
+```
+
+### 访问地址
+- 管理员登录: http://localhost:3000/admin/login
+- 工作台: http://localhost:3000/admin/dashboard
+
+## 技术栈
+
+- Vue 3 + Vite
+- Element Plus UI 组件库
+- Vue Router 4
+- Pinia 状态管理
+- Axios HTTP 客户端
+- Date-fns 时间处理
+
+## 简化说明
+
+为专注于仲裁管理，已移除以下模块：
+- 用户管理
+- 商品管理  
+- 订单管理
+- 系统配置
+- 权限管理
+
+详细说明请查看 [ADMIN_SIMPLIFIED.md](./ADMIN_SIMPLIFIED.md)

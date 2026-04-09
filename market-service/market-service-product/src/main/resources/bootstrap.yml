@@ -9,9 +9,11 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8849
+        server-addr: 127.0.0.1:8848
+        ip: 127.0.0.1
+        port: ${server.port}
       config:
-        server-addr: 127.0.0.1:8849
+        server-addr: 127.0.0.1:8848
         file-extension: yml
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
@@ -61,4 +63,10 @@ sa-token:
   token-style: uuid
   is-log: false
   is-print: false
+  # 是否从cookie中读取token
+  is-read-cookie: false
+  # 是否从head中读取token
+  is-read-head: true
+  # token前缀
+  token-prefix: Bearer
 

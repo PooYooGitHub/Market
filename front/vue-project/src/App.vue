@@ -1,33 +1,12 @@
 <template>
-  <router-view />
+  <div id="app">
+    <router-view />
+  </div>
 </template>
 
 <script setup>
-import { watch, onMounted, onUnmounted } from 'vue'
-import { useUserStore } from '@/stores/user'
-import websocketService from '@/utils/websocket'
-
-const userStore = useUserStore()
-
-// 监听用户登录状态
-watch(
-  () => userStore.isLoggedIn,
-  (isLoggedIn) => {
-    if (isLoggedIn && userStore.userInfo?.id) {
-      // 用户登录，建立 WebSocket 连接
-      websocketService.connect(userStore.userInfo.id)
-    } else {
-      // 用户登出，关闭 WebSocket 连接
-      websocketService.close()
-    }
-  },
-  { immediate: true }
-)
-
-// 组件卸载时关闭 WebSocket 连接
-onUnmounted(() => {
-  websocketService.close()
-})
+// Vue 应用入口组件
+console.log('App.vue 组件加载成功')
 </script>
 
 <style>
@@ -42,9 +21,35 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #f5f7ff 0%, #e8f4fd 100%);
+  color: #2d3748;
 }
 
 #app {
   min-height: 100vh;
+}
+
+/* 全局按钮样式 */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: white !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+/* 全局卡片样式 */
+.card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+  border: 1px solid rgba(102, 126, 234, 0.1);
 }
 </style>

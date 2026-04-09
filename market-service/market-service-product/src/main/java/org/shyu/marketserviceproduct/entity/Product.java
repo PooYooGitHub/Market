@@ -59,6 +59,17 @@ public class Product implements Serializable {
     private Integer viewCount;
 
     /**
+     * 审核备注
+     */
+    private String auditRemark;
+
+    /**
+     * 是否删除 0:否 1:是
+     */
+    @TableLogic
+    private Integer deleted;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

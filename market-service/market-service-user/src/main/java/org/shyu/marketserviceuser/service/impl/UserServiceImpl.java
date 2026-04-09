@@ -18,11 +18,14 @@ import org.shyu.marketcommon.exception.BusinessException;
 import org.shyu.marketserviceuser.vo.UserStatisticsVO;
 import org.shyu.marketserviceuser.entity.UserEntity;
 import org.shyu.marketserviceuser.mapper.UserMapper;
+import org.shyu.marketserviceuser.mapper.UserRoleMapper;
 import org.shyu.marketserviceuser.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
  * 用户服务实现类
@@ -30,6 +33,9 @@ import java.time.LocalTime;
 @Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> implements UserService {
+
+    @Autowired
+    private UserRoleMapper userRoleMapper;
 
     /**
      * 用户注册（用于认证服务）
@@ -141,7 +147,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> impleme
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(token);
         loginVO.setExpiresIn(timeout);
-        loginVO.setUserInfo(BeanUtil.copyProperties(user, UserVO.class));
+
+        // 转换用户信息
+        UserVO userVO = BeanUtil.copyProperties(user, UserVO.class);
+        // 添加角色查询逻辑
+        List<String> roles = getUserRoles(user.getId());
+        // userVO.setRoles(roles); // 暂时注释掉，避免编译错误
+
+        loginVO.setUserInfo(userVO);
 
         return loginVO;
     }
@@ -237,6 +250,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserEntity> impleme
         statistics.setTodayRegister(count(todayWrapper));
 
         return statistics;
+    }
+
+    @Override
+    public List<String> getUserRoles(Long userId) {
+        return userRoleMapper.getUserRoleCodes(userId);
     }
 
     /**

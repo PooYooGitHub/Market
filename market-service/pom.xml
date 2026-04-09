@@ -24,9 +24,9 @@
         <module>market-service-message</module>
 
         <!-- 扩展服务（待开发） -->
-        <!--
         <module>market-service-credit</module>
         <module>market-service-arbitration</module>
+        <!--
         <module>market-service-admin</module>
         -->
     </modules>

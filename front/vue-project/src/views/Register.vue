@@ -78,7 +78,7 @@
         </el-form-item>
 
         <div class="link-group">
-          <el-link type="primary" :underline="false" @click="$router.push('/login')">
+          <el-link type="primary" underline="never" @click="$router.push('/login')">
             <el-icon><Right /></el-icon>
             已有账号？立即登录
           </el-link>

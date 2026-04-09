@@ -51,7 +51,7 @@
         </el-form-item>
 
         <div class="link-group">
-          <el-link type="primary" :underline="false" @click="$router.push('/register')">
+          <el-link type="primary" underline="never" @click="$router.push('/register')">
             <el-icon><UserFilled /></el-icon>
             还没有账号？立即注册
           </el-link>

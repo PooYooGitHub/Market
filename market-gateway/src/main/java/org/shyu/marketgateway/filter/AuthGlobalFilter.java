@@ -76,9 +76,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             log.debug("Token 验证通过，userId: {}", userId);
 
             // 4. 将 userId 和 token 放入 Header - 下游服务可直接使用
+            // Sa-Token 配置了 token-prefix: Bearer，所以需要带上前缀
             ServerHttpRequest request = exchange.getRequest().mutate()
                     .header("X-User-Id", userId)
-                    .header("satoken", token)  // 传递原始token给下游服务，Sa-Token需要
+                    .header("satoken", "Bearer " + token)  // 传递带 Bearer 前缀的 token
                     .build();
 
             // 5. 继续执行过滤器链
@@ -93,8 +94,8 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     /**
      * 从请求中提取 Token
      * 支持两种方式：
-     * 1. Header: satoken: xxx
-     * 2. Header: Authorization: xxx
+     * 1. Header: satoken: xxx 或 satoken: Bearer xxx
+     * 2. Header: Authorization: Bearer xxx
      */
     private String extractToken(ServerWebExchange exchange) {
         // 优先从 satoken Header 获取
@@ -103,11 +104,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         if (!StringUtils.hasText(token)) {
             // 尝试从 Authorization Header 获取
             token = exchange.getRequest().getHeaders().getFirst("Authorization");
+        }
 
-            // 去除 Bearer 前缀
-            if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {
-                token = token.substring(7);
-            }
+        // 去除 Bearer 前缀（无论来自哪个 Header）
+        if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {
+            token = token.substring(7);
         }
 
         return token;

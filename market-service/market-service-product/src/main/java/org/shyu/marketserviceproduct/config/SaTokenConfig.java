@@ -23,6 +23,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
             SaRouter.match("/**")
                     .notMatch("/product/list")           // 商品列表（公开）
                     .notMatch("/product/detail/**")      // 商品详情（公开）
+                    .notMatch("/product/statistics")     // 平台统计（公开）
                     .notMatch("/category/list")          // 分类列表（公开）
                     .notMatch("/category/**")            // 分类相关接口（公开）
                     .notMatch("/feign/**")               // Feign 内部调用
@@ -31,7 +32,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
         })).addPathPatterns("/**");
 
         log.info("Sa-Token拦截器注册成功 - Product Service");
-        log.info("公开接口（无需登录）：/product/list, /product/detail/*, /category/**");
+        log.info("公开接口（无需登录）：/product/list, /product/detail/*, /product/statistics, /category/**");
         log.info("需要登录的接口：/product/publish, /product/update, /product/delete, /product/my");
     }
 }

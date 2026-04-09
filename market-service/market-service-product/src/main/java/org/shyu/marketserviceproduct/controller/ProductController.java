@@ -10,6 +10,7 @@ import org.shyu.marketserviceproduct.dto.ProductUpdateRequest;
 import org.shyu.marketserviceproduct.service.ProductService;
 import org.shyu.marketserviceproduct.vo.ProductDetailVO;
 import org.shyu.marketserviceproduct.vo.ProductListVO;
+import org.shyu.marketserviceproduct.vo.PlatformStatisticsVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -83,6 +84,15 @@ public class ProductController {
         Long userId = StpUtil.getLoginIdAsLong();
         Page<ProductListVO> page = productService.getMyProducts(userId, pageNum, pageSize);
         return Result.success(page);
+    }
+
+    /**
+     * 获取平台统计数据
+     */
+    @GetMapping("/statistics")
+    public Result<PlatformStatisticsVO> getPlatformStatistics() {
+        PlatformStatisticsVO statistics = productService.getPlatformStatistics();
+        return Result.success(statistics);
     }
 }
 
