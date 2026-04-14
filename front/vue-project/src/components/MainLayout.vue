@@ -1,19 +1,8 @@
 ﻿<template>
   <div class="main-layout">
-    <!-- 椤堕儴瀵艰埅鏍?-->
+    <!-- 顶部导航栏 -->
     <el-header class="header">
       <div class="header-content">
-        <div class="logo-section" @click="$router.push('/')">
-          <div class="logo-container">
-            <el-icon size="20" color="#667eea">
-              <ShoppingBag />
-            </el-icon>
-            <div class="logo-text">
-              璺宠殼<br/>甯傚満
-            </div>
-          </div>
-        </div>
-
         <el-menu
           mode="horizontal"
           :ellipsis="false"
@@ -23,36 +12,37 @@
         >
           <el-menu-item index="/">
             <el-icon><HomeFilled /></el-icon>
-            棣栭〉
+            首页
           </el-menu-item>
           <el-menu-item index="/products">
             <el-icon><Goods /></el-icon>
-            鍟嗗搧鍒楄〃
+            商品列表
           </el-menu-item>
 
           <template v-if="userStore.isLoggedIn">
             <el-menu-item index="/product/publish">
               <el-icon><Plus /></el-icon>
-              鍙戝竷鍟嗗搧
+              发布商品
             </el-menu-item>
             <el-menu-item index="/my-products">
               <el-icon><Box /></el-icon>
-              鎴戠殑鍟嗗搧
+              我的商品
             </el-menu-item>
             <el-menu-item index="/cart">
               <el-icon><ShoppingCart /></el-icon>
-              璐墿杞?            </el-menu-item>
+              购物车
+            </el-menu-item>
             <el-menu-item index="/orders">
               <el-icon><Tickets /></el-icon>
-              鎴戠殑璁㈠崟
+              我的订单
             </el-menu-item>
             <el-menu-item index="/messages">
               <el-icon><ChatDotRound /></el-icon>
-              娑堟伅
+              消息
             </el-menu-item>
             <el-menu-item index="/credit">
               <el-icon><Medal /></el-icon>
-              鎴戠殑淇＄敤
+              我的信用
             </el-menu-item>
             <el-menu-item index="/dispute/my">
               <el-icon><DocumentChecked /></el-icon>
@@ -79,43 +69,44 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="profile">
                     <el-icon><User /></el-icon>
-                    涓汉涓績
+                    个人中心
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>
-                    閫€鍑虹櫥褰?                  </el-dropdown-item>
+                    退出登录
+                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
           </template>
           <template v-else>
             <el-button-group>
-              <el-button @click="$router.push('/login')">鐧诲綍</el-button>
-              <el-button type="primary" @click="$router.push('/register')">娉ㄥ唽</el-button>
+              <el-button @click="$router.push('/login')">登录</el-button>
+              <el-button type="primary" @click="$router.push('/register')">注册</el-button>
             </el-button-group>
           </template>
         </div>
       </div>
     </el-header>
 
-    <!-- 涓诲唴瀹瑰尯 -->
+    <!-- 主内容区 -->
     <el-main class="main-content">
       <router-view />
     </el-main>
 
-    <!-- 椤佃剼 -->
+    <!-- 页脚 -->
     <el-footer class="footer">
       <div class="footer-content">
         <div class="footer-info">
-          <p>&copy; 2026 鏍″洯璺宠殼甯傚満</p>
-          <p>鍩轰簬 SpringCloud 寰湇鍔℃灦鏋?| Vue 3 + Element Plus</p>
+          <p>&copy; 2026 校园跳蚤市场</p>
+          <p>基于 SpringCloud 微服务架构 | Vue 3 + Element Plus</p>
         </div>
         <div class="footer-links">
-          <el-link href="#" underline="never">鍏充簬鎴戜滑</el-link>
+          <el-link href="#" underline="never">关于我们</el-link>
           <el-divider direction="vertical" />
-          <el-link href="#" underline="never">甯姪涓績</el-link>
+          <el-link href="#" underline="never">帮助中心</el-link>
           <el-divider direction="vertical" />
-          <el-link href="#" underline="never">鑱旂郴鎴戜滑</el-link>
+          <el-link href="#" underline="never">联系我们</el-link>
         </div>
       </div>
     </el-footer>
@@ -140,8 +131,7 @@ import {
   User,
   ArrowDown,
   SwitchButton,
-  DocumentChecked,
-  ShoppingBag
+  DocumentChecked
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -209,44 +199,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   height: 100%;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 80px;
-}
-
-.logo-section:hover {
-  transform: scale(1.02);
-}
-
-.logo-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-  transition: all 0.3s ease;
-}
-
-.logo-container:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.logo-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: white;
-  line-height: 1.1;
-  text-align: center;
 }
 
 .nav-menu {
@@ -348,14 +302,6 @@ onBeforeUnmount(() => {
   .nav-menu {
     margin: 0;
     width: 100%;
-  }
-
-  .logo-container {
-    padding: 4px 8px;
-  }
-
-  .logo-text {
-    font-size: 10px;
   }
 
   .footer-content {

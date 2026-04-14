@@ -46,7 +46,7 @@ const routes = [
     name: 'LoginDebug',
     component: LoginDebug,
     meta: {
-      title: '鐧诲綍璋冭瘯'
+      title: '登录调试'
     }
   },
   // 璺敱娴嬭瘯
@@ -55,7 +55,7 @@ const routes = [
     name: 'RouteTest',
     component: RouteTest,
     meta: {
-      title: '璺敱娴嬭瘯'
+      title: '路由测试'
     }
   },
   // 璋冭瘯璺敱
@@ -64,7 +64,7 @@ const routes = [
     name: 'DebugPage',
     component: DebugPage,
     meta: {
-      title: 'Vue搴旂敤璋冭瘯'
+      title: 'Vue应用调试'
     }
   },
   // 娴嬭瘯璺敱
@@ -73,7 +73,7 @@ const routes = [
     name: 'SimpleTest',
     component: SimpleTest,
     meta: {
-      title: '娴嬭瘯椤甸潰'
+      title: '测试页面'
     }
   },
   // 用户端独立页面 - 不需要导航栏的页面
@@ -82,7 +82,7 @@ const routes = [
     name: 'Login',
     component: Login,
     meta: {
-      title: '鐢ㄦ埛鐧诲綍',
+      title: '用户登录',
       requiresGuest: true
     }
   },
@@ -91,7 +91,7 @@ const routes = [
     name: 'Register',
     component: Register,
     meta: {
-      title: '鐢ㄦ埛娉ㄥ唽',
+      title: '用户注册',
       requiresGuest: true
     }
   },
@@ -105,7 +105,7 @@ const routes = [
         name: 'Home',
         component: Home,
         meta: {
-          title: '棣栭〉'
+          title: '首页'
         }
       },
       // 鍟嗗搧鐩稿叧璺敱
@@ -114,7 +114,7 @@ const routes = [
         name: 'ProductList',
         component: ProductList,
         meta: {
-          title: '鍟嗗搧鍒楄〃'
+          title: '商品列表'
         }
       },
       {
@@ -122,7 +122,7 @@ const routes = [
         name: 'ProductDetail',
         component: ProductDetail,
         meta: {
-          title: '鍟嗗搧璇︽儏'
+          title: '商品详情'
         }
       },
       {
@@ -130,7 +130,7 @@ const routes = [
         name: 'ProductPublish',
         component: ProductForm,
         meta: {
-          title: '鍙戝竷鍟嗗搧',
+          title: '发布商品',
           requiresAuth: true
         }
       },
@@ -139,7 +139,7 @@ const routes = [
         name: 'ProductEdit',
         component: ProductForm,
         meta: {
-          title: '缂栬緫鍟嗗搧',
+          title: '编辑商品',
           requiresAuth: true
         }
       },
@@ -148,7 +148,7 @@ const routes = [
         name: 'MyProducts',
         component: MyProducts,
         meta: {
-          title: '鎴戠殑鍟嗗搧',
+          title: '我的商品',
           requiresAuth: true
         }
       },
@@ -158,7 +158,7 @@ const routes = [
         name: 'Profile',
         component: Profile,
         meta: {
-          title: '涓汉涓績',
+          title: '个人中心',
           requiresAuth: true
         }
       },
@@ -167,7 +167,7 @@ const routes = [
         name: 'UserProfile',
         component: UserProfile,
         meta: {
-          title: '鐢ㄦ埛璧勬枡',
+          title: '用户资料',
           requiresAuth: true
         }
       },
@@ -177,7 +177,7 @@ const routes = [
         name: 'Messages',
         component: Messages,
         meta: {
-          title: '娑堟伅',
+          title: '消息',
           requiresAuth: true
         }
       },
@@ -196,7 +196,7 @@ const routes = [
         name: 'OrderList',
         component: OrderList,
         meta: {
-          title: '鎴戠殑璁㈠崟',
+          title: '我的订单',
           requiresAuth: true
         }
       },
@@ -205,7 +205,7 @@ const routes = [
         name: 'OrderDetail',
         component: OrderDetail,
         meta: {
-          title: '璁㈠崟璇︽儏',
+          title: '订单详情',
           requiresAuth: true
         }
       },
@@ -215,7 +215,7 @@ const routes = [
         name: 'Payment',
         component: Payment,
         meta: {
-          title: '璁㈠崟鏀粯',
+          title: '订单支付',
           requiresAuth: true
         }
       },
@@ -224,7 +224,7 @@ const routes = [
         name: 'PaymentHistory',
         component: PaymentHistory,
         meta: {
-          title: '鏀粯璁板綍',
+          title: '支付记录',
           requiresAuth: true
         }
       },
@@ -233,7 +233,7 @@ const routes = [
         name: 'PaymentDemo',
         component: PaymentDemo,
         meta: {
-          title: '鏀粯绯荤粺婕旂ず'
+          title: '支付系统演示'
         }
       },
       // 淇＄敤璇勪环鐩稿叧璺敱
@@ -242,7 +242,7 @@ const routes = [
         name: 'CreditInfo',
         component: CreditInfo,
         meta: {
-          title: '鎴戠殑淇＄敤',
+          title: '我的信用',
           requiresAuth: true
         }
       },
@@ -252,7 +252,7 @@ const routes = [
         name: 'ArbitrationApply',
         component: ArbitrationApply,
         meta: {
-          title: '鐢宠浠茶',
+          title: '申请仲裁',
           requiresAuth: true
         }
       },
@@ -261,7 +261,7 @@ const routes = [
         name: 'ArbitrationList',
         component: ArbitrationList,
         meta: {
-          title: '鎴戠殑浠茶',
+          title: '我的仲裁',
           requiresAuth: true
         }
       },
@@ -270,7 +270,7 @@ const routes = [
         name: 'ArbitrationDetail',
         component: ArbitrationDetail,
         meta: {
-          title: '浠茶璇︽儏',
+          title: '仲裁详情',
           requiresAuth: true
         }
       },
@@ -402,7 +402,7 @@ const routes = [
         name: 'StatisticsOverview',
         component: () => import('@/views/Admin/Statistics/Overview.vue'),
         meta: {
-          title: '鏁版嵁姒傝'
+          title: '数据概览'
         }
       },
       {
@@ -410,7 +410,7 @@ const routes = [
         name: 'StatisticsArbitration',
         component: () => import('@/views/Admin/Statistics/ArbitrationStats.vue'),
         meta: {
-          title: '浠茶缁熻'
+          title: '仲裁统计'
         }
       },
       {
@@ -418,7 +418,7 @@ const routes = [
         name: 'StatisticsTrend',
         component: () => import('@/views/Admin/Statistics/TrendAnalysis.vue'),
         meta: {
-          title: '瓒嬪娍鍒嗘瀽'
+          title: '趋势分析'
         }
       },
       {
@@ -426,7 +426,7 @@ const routes = [
         name: 'StatisticsReports',
         component: () => import('@/views/Admin/Statistics/Reports.vue'),
         meta: {
-          title: '鎶ヨ〃瀵煎嚭'
+          title: '报表导出'
         }
       }
     ]
@@ -442,7 +442,7 @@ const router = createRouter({
 // 璺敱瀹堝崼
 router.beforeEach((to, from, next) => {
   // 璁剧疆椤甸潰鏍囬
-  document.title = to.meta.title ? `${to.meta.title} - 鏍″洯璺宠殼甯傚満` : '鏍″洯璺宠殼甯傚満'
+  document.title = to.meta.title ? `${to.meta.title} - 校园跳蚤市场` : '校园跳蚤市场'
 
   // 璋冭瘯璺敱锛岀洿鎺ラ€氳繃
   if (to.path === '/debug') {
@@ -475,7 +475,7 @@ router.beforeEach((to, from, next) => {
     if (to.meta.requiresRole) {
       const userRole = localStorage.getItem('userRole')
       if (userRole !== to.meta.requiresRole) {
-        alert('鏉冮檺涓嶈冻')
+        alert('权限不足')
         next('/admin/dashboard')
         return
       }
@@ -491,7 +491,7 @@ router.beforeEach((to, from, next) => {
 
   // 如果页面需要登录
   if (to.meta.requiresAuth && !isLoggedIn) {
-    alert('璇峰厛鐧诲綍')
+    alert('请先登录')
     next('/login')
     return
   }
