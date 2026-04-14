@@ -280,7 +280,7 @@ const loadPendingCases = async () => {
 // 加载统计数据（真实数据）
 const loadStatistics = async () => {
   try {
-    const response = await arbitrationApi.getArbitrationStats()
+    const response = await arbitrationApi.getAdminArbitrationStats()
     const stats = response?.data || {}
     statistics.pendingCount = stats.pendingCount || 0
     statistics.urgentCount = stats.urgentCount || 0
@@ -458,7 +458,7 @@ const acceptCase = async (caseItem) => {
       type: 'warning'
     })
 
-    await arbitrationApi.acceptArbitration(caseItem.id)
+    await arbitrationApi.acceptAdminArbitration(caseItem.id)
     ElMessage.success('案件受理成功')
     refreshData()
   } catch (error) {
@@ -480,7 +480,10 @@ const rejectCase = async (caseItem) => {
       }
     })
 
-    await arbitrationApi.rejectArbitration(caseItem.id, reason)
+    await arbitrationApi.rejectAdminArbitration({
+      arbitrationId: caseItem.id,
+      rejectReason: String(reason).trim()
+    })
     ElMessage.success('案件驳回成功')
     refreshData()
   } catch (error) {
@@ -505,7 +508,7 @@ const batchAccept = async () => {
     })
 
     batchLoading.value = true
-    await Promise.all(selectedCases.value.map(item => arbitrationApi.acceptArbitration(item.id)))
+    await Promise.all(selectedCases.value.map(item => arbitrationApi.acceptAdminArbitration(item.id)))
 
     ElMessage.success(`成功受理 ${selectedCases.value.length} 个案件`)
     selectedCases.value = []
@@ -537,7 +540,10 @@ const batchReject = async () => {
     })
 
     batchLoading.value = true
-    await Promise.all(selectedCases.value.map(item => arbitrationApi.rejectArbitration(item.id, reason)))
+    await Promise.all(selectedCases.value.map(item => arbitrationApi.rejectAdminArbitration({
+      arbitrationId: item.id,
+      rejectReason: String(reason).trim()
+    })))
 
     ElMessage.success(`成功驳回 ${selectedCases.value.length} 个案件`)
     selectedCases.value = []

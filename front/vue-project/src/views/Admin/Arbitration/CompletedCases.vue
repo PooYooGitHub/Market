@@ -96,7 +96,7 @@
 
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="scope">
-            <el-button size="small" type="primary" @click="viewResult(scope.row)">查看裁决</el-button>
+            <el-button size="small" type="primary" @click="goCaseDetail(scope.row)">查看详情</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -118,13 +118,15 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { arbitrationApi } from '@/api/arbitration'
 
 const loading = ref(false)
 const searchKeyword = ref('')
 const caseList = ref([])
+const router = useRouter()
 
 const statistics = reactive({
   completedCount: 0,
@@ -178,7 +180,7 @@ const loadCompletedCases = async () => {
 
 const loadStatistics = async () => {
   try {
-    const response = await arbitrationApi.getArbitrationStats()
+    const response = await arbitrationApi.getAdminArbitrationStats()
     const stats = response?.data || {}
     statistics.completedCount = Number(stats.completedCount || 0)
     statistics.rejectedCount = Number(stats.rejectedCount || 0)
@@ -276,15 +278,15 @@ const handleCurrentChange = (page) => {
   loadCompletedCases().then(loadStatistics)
 }
 
-const viewResult = async (caseItem) => {
-  await ElMessageBox.alert(
-    `<div style="line-height:1.7;"><strong>案件编号：</strong>${caseItem.caseNumber}<br/><strong>裁决结果：</strong>${caseItem.result}</div>`,
-    '裁决详情',
-    {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '我知道了'
+const goCaseDetail = (caseItem) => {
+  router.push({
+    name: 'AdminArbitrationDetail',
+    params: { id: caseItem.id },
+    query: {
+      from: 'completed',
+      caseNumber: caseItem.caseNumber
     }
-  )
+  })
 }
 </script>
 

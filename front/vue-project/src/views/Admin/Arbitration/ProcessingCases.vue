@@ -198,7 +198,7 @@ const loadProcessingCases = async () => {
 
 const loadStatistics = async () => {
   try {
-    const response = await arbitrationApi.getArbitrationStats()
+    const response = await arbitrationApi.getAdminArbitrationStats()
     const stats = response?.data || {}
     statistics.processingCount = Number(stats.processingCount || 0)
     const urgent = caseList.value.filter(item => item.priority === 'high').length
@@ -376,9 +376,9 @@ const resolveCase = async (caseItem) => {
       }
     })
 
-    await arbitrationApi.handleArbitration({
-      id: caseItem.id,
-      result: String(value).trim()
+    await arbitrationApi.completeAdminArbitration({
+      arbitrationId: caseItem.id,
+      decisionRemark: String(value).trim()
     })
 
     ElMessage.success('案件已完结')
@@ -403,7 +403,10 @@ const rejectCase = async (caseItem) => {
       }
     })
 
-    await arbitrationApi.rejectArbitration(caseItem.id, String(value).trim())
+    await arbitrationApi.rejectAdminArbitration({
+      arbitrationId: caseItem.id,
+      rejectReason: String(value).trim()
+    })
     ElMessage.success('案件已驳回')
     refreshData()
   } catch (error) {

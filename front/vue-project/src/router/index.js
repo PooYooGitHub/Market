@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/components/MainLayout.vue'
 import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
@@ -23,7 +23,7 @@ import ArbitrationAdmin from '@/views/Arbitration/ArbitrationAdmin.vue'
 import SimpleTest from '@/views/SimpleTest.vue'
 import UserProfile from '@/views/UserProfile.vue'
 
-// 管理系统相关导入
+// 绠＄悊绯荤粺鐩稿叧瀵煎叆
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import AdminLogin from '@/views/Admin/Login.vue'
 import AdminDashboard from '@/views/Admin/Dashboard.vue'
@@ -33,42 +33,42 @@ import RouteTest from '@/views/RouteTest.vue'
 
 import LoginDebug from '@/views/LoginDebug.vue'
 
-// 路由配置
+// 璺敱閰嶇疆
 const routes = [
-  // 登录调试路由
+  // 鐧诲綍璋冭瘯璺敱
   {
     path: '/login-debug',
     name: 'LoginDebug',
     component: LoginDebug,
     meta: {
-      title: '登录调试'
+      title: '鐧诲綍璋冭瘯'
     }
   },
-  // 路由测试
+  // 璺敱娴嬭瘯
   {
     path: '/route-test',
     name: 'RouteTest',
     component: RouteTest,
     meta: {
-      title: '路由测试'
+      title: '璺敱娴嬭瘯'
     }
   },
-  // 调试路由
+  // 璋冭瘯璺敱
   {
     path: '/debug',
     name: 'DebugPage',
     component: DebugPage,
     meta: {
-      title: 'Vue应用调试'
+      title: 'Vue搴旂敤璋冭瘯'
     }
   },
-  // 测试路由
+  // 娴嬭瘯璺敱
   {
     path: '/test',
     name: 'SimpleTest',
     component: SimpleTest,
     meta: {
-      title: '测试页面'
+      title: '娴嬭瘯椤甸潰'
     }
   },
   // 用户端独立页面 - 不需要导航栏的页面
@@ -77,7 +77,7 @@ const routes = [
     name: 'Login',
     component: Login,
     meta: {
-      title: '用户登录',
+      title: '鐢ㄦ埛鐧诲綍',
       requiresGuest: true
     }
   },
@@ -86,11 +86,11 @@ const routes = [
     name: 'Register',
     component: Register,
     meta: {
-      title: '用户注册',
+      title: '鐢ㄦ埛娉ㄥ唽',
       requiresGuest: true
     }
   },
-  // 用户端主布局路由 - 包含导航栏的页面
+  // 鐢ㄦ埛绔富甯冨眬璺敱 - 鍖呭惈瀵艰埅鏍忕殑椤甸潰
   {
     path: '/',
     component: MainLayout,
@@ -100,16 +100,16 @@ const routes = [
         name: 'Home',
         component: Home,
         meta: {
-          title: '首页'
+          title: '棣栭〉'
         }
       },
-      // 商品相关路由
+      // 鍟嗗搧鐩稿叧璺敱
       {
         path: 'products',
         name: 'ProductList',
         component: ProductList,
         meta: {
-          title: '商品列表'
+          title: '鍟嗗搧鍒楄〃'
         }
       },
       {
@@ -117,7 +117,7 @@ const routes = [
         name: 'ProductDetail',
         component: ProductDetail,
         meta: {
-          title: '商品详情'
+          title: '鍟嗗搧璇︽儏'
         }
       },
       {
@@ -125,7 +125,7 @@ const routes = [
         name: 'ProductPublish',
         component: ProductForm,
         meta: {
-          title: '发布商品',
+          title: '鍙戝竷鍟嗗搧',
           requiresAuth: true
         }
       },
@@ -134,7 +134,7 @@ const routes = [
         name: 'ProductEdit',
         component: ProductForm,
         meta: {
-          title: '编辑商品',
+          title: '缂栬緫鍟嗗搧',
           requiresAuth: true
         }
       },
@@ -143,17 +143,17 @@ const routes = [
         name: 'MyProducts',
         component: MyProducts,
         meta: {
-          title: '我的商品',
+          title: '鎴戠殑鍟嗗搧',
           requiresAuth: true
         }
       },
-      // 用户相关路由
+      // 鐢ㄦ埛鐩稿叧璺敱
       {
         path: 'profile',
         name: 'Profile',
         component: Profile,
         meta: {
-          title: '个人中心',
+          title: '涓汉涓績',
           requiresAuth: true
         }
       },
@@ -162,21 +162,21 @@ const routes = [
         name: 'UserProfile',
         component: UserProfile,
         meta: {
-          title: '用户资料',
+          title: '鐢ㄦ埛璧勬枡',
           requiresAuth: true
         }
       },
-      // 消息相关路由
+      // 娑堟伅鐩稿叧璺敱
       {
         path: 'messages',
         name: 'Messages',
         component: Messages,
         meta: {
-          title: '消息',
+          title: '娑堟伅',
           requiresAuth: true
         }
       },
-      // 交易相关路由
+      // 浜ゆ槗鐩稿叧璺敱
       {
         path: 'cart',
         name: 'Cart',
@@ -191,7 +191,7 @@ const routes = [
         name: 'OrderList',
         component: OrderList,
         meta: {
-          title: '我的订单',
+          title: '鎴戠殑璁㈠崟',
           requiresAuth: true
         }
       },
@@ -200,17 +200,17 @@ const routes = [
         name: 'OrderDetail',
         component: OrderDetail,
         meta: {
-          title: '订单详情',
+          title: '璁㈠崟璇︽儏',
           requiresAuth: true
         }
       },
-      // 支付相关路由
+      // 鏀粯鐩稿叧璺敱
       {
         path: 'payment/:id',
         name: 'Payment',
         component: Payment,
         meta: {
-          title: '订单支付',
+          title: '璁㈠崟鏀粯',
           requiresAuth: true
         }
       },
@@ -219,7 +219,7 @@ const routes = [
         name: 'PaymentHistory',
         component: PaymentHistory,
         meta: {
-          title: '支付记录',
+          title: '鏀粯璁板綍',
           requiresAuth: true
         }
       },
@@ -228,26 +228,26 @@ const routes = [
         name: 'PaymentDemo',
         component: PaymentDemo,
         meta: {
-          title: '支付系统演示'
+          title: '鏀粯绯荤粺婕旂ず'
         }
       },
-      // 信用评价相关路由
+      // 淇＄敤璇勪环鐩稿叧璺敱
       {
         path: 'credit',
         name: 'CreditInfo',
         component: CreditInfo,
         meta: {
-          title: '我的信用',
+          title: '鎴戠殑淇＄敤',
           requiresAuth: true
         }
       },
-      // 仲裁相关路由
+      // 浠茶鐩稿叧璺敱
       {
         path: 'arbitration/apply',
         name: 'ArbitrationApply',
         component: ArbitrationApply,
         meta: {
-          title: '申请仲裁',
+          title: '鐢宠浠茶',
           requiresAuth: true
         }
       },
@@ -256,7 +256,7 @@ const routes = [
         name: 'ArbitrationList',
         component: ArbitrationList,
         meta: {
-          title: '我的仲裁',
+          title: '鎴戠殑浠茶',
           requiresAuth: true
         }
       },
@@ -265,7 +265,7 @@ const routes = [
         name: 'ArbitrationDetail',
         component: ArbitrationDetail,
         meta: {
-          title: '仲裁详情',
+          title: '浠茶璇︽儏',
           requiresAuth: true
         }
       }
@@ -291,7 +291,7 @@ const routes = [
       title: '管理员登录'
     }
   },
-  // 管理端布局路由
+  // 绠＄悊绔竷灞€璺敱
   {
     path: '/admin',
     component: AdminLayout,
@@ -313,7 +313,7 @@ const routes = [
           title: '工作台'
         }
       },
-      // 仲裁管理路由
+      // 浠茶绠＄悊璺敱
       {
         path: 'arbitration/pending',
         name: 'ArbitrationPending',
@@ -333,7 +333,7 @@ const routes = [
       {
         path: 'arbitration/detail/:id',
         name: 'AdminArbitrationDetail',
-        component: () => import('@/views/Admin/Arbitration/CaseDetail.vue'),
+        component: () => import('@/views/Admin/Arbitration/CaseWorkbench.vue'),
         meta: {
           title: '仲裁详情'
         }
@@ -346,13 +346,13 @@ const routes = [
           title: '已完成仲裁'
         }
       },
-      // 数据统计路由
+      // 鏁版嵁缁熻璺敱
       {
         path: 'statistics/overview',
         name: 'StatisticsOverview',
         component: () => import('@/views/Admin/Statistics/Overview.vue'),
         meta: {
-          title: '数据概览'
+          title: '鏁版嵁姒傝'
         }
       },
       {
@@ -360,7 +360,7 @@ const routes = [
         name: 'StatisticsArbitration',
         component: () => import('@/views/Admin/Statistics/ArbitrationStats.vue'),
         meta: {
-          title: '仲裁统计'
+          title: '浠茶缁熻'
         }
       },
       {
@@ -368,7 +368,7 @@ const routes = [
         name: 'StatisticsTrend',
         component: () => import('@/views/Admin/Statistics/TrendAnalysis.vue'),
         meta: {
-          title: '趋势分析'
+          title: '瓒嬪娍鍒嗘瀽'
         }
       },
       {
@@ -376,25 +376,25 @@ const routes = [
         name: 'StatisticsReports',
         component: () => import('@/views/Admin/Statistics/Reports.vue'),
         meta: {
-          title: '报表导出'
+          title: '鎶ヨ〃瀵煎嚭'
         }
       }
     ]
   }
 ]
 
-// 创建路由实例
+// 鍒涘缓璺敱瀹炰緥
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
-// 路由守卫
+// 璺敱瀹堝崼
 router.beforeEach((to, from, next) => {
-  // 设置页面标题
-  document.title = to.meta.title ? `${to.meta.title} - 校园跳蚤市场` : '校园跳蚤市场'
+  // 璁剧疆椤甸潰鏍囬
+  document.title = to.meta.title ? `${to.meta.title} - 鏍″洯璺宠殼甯傚満` : '鏍″洯璺宠殼甯傚満'
 
-  // 调试路由，直接通过
+  // 璋冭瘯璺敱锛岀洿鎺ラ€氳繃
   if (to.path === '/debug') {
     next()
     return
@@ -402,7 +402,7 @@ router.beforeEach((to, from, next) => {
 
   // 管理端路由处理
   if (to.path.startsWith('/admin')) {
-    // 管理员登录页面特殊处理
+    // 管理员登录页特殊处理
     if (to.path === '/admin/login') {
       const adminToken = localStorage.getItem('adminToken')
       if (adminToken) {
@@ -416,7 +416,7 @@ router.beforeEach((to, from, next) => {
     // 检查管理员登录状态
     const adminToken = localStorage.getItem('adminToken')
     if (!adminToken) {
-      console.log('未检测到管理员token，跳转到登录页')
+      console.log('未检测到管理员 token，跳转到登录页')
       next('/admin/login')
       return
     }
@@ -425,7 +425,7 @@ router.beforeEach((to, from, next) => {
     if (to.meta.requiresRole) {
       const userRole = localStorage.getItem('userRole')
       if (userRole !== to.meta.requiresRole) {
-        alert('权限不足')
+        alert('鏉冮檺涓嶈冻')
         next('/admin/dashboard')
         return
       }
@@ -441,12 +441,12 @@ router.beforeEach((to, from, next) => {
 
   // 如果页面需要登录
   if (to.meta.requiresAuth && !isLoggedIn) {
-    alert('请先登录')
+    alert('璇峰厛鐧诲綍')
     next('/login')
     return
   }
 
-  // 如果页面需要未登录状态（如登录页、注册页）
+  // 如果页面要求未登录状态（如登录页、注册页）
   if (to.meta.requiresGuest && isLoggedIn) {
     next('/')
     return
@@ -456,3 +456,4 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
+

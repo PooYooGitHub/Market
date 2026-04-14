@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 export const arbitrationApi = {
   createArbitration(data) {
@@ -68,6 +68,13 @@ export const arbitrationApi = {
     })
   },
 
+  getAdminArbitrationStats() {
+    return request({
+      url: '/api/arbitration/admin/stats',
+      method: 'get'
+    })
+  },
+
   getAdminArbitrationDetail(id) {
     return request({
       url: `/api/arbitration/admin/detail/${id}`,
@@ -75,26 +82,26 @@ export const arbitrationApi = {
     })
   },
 
-  acceptArbitration(id) {
+  acceptAdminArbitration(id) {
     return request({
       url: `/api/arbitration/admin/accept/${id}`,
       method: 'post'
     })
   },
 
-  handleArbitration(data) {
+  completeAdminArbitration(data) {
     return request({
-      url: '/api/arbitration/admin/handle',
+      url: '/api/arbitration/admin/complete',
       method: 'post',
       data
     })
   },
 
-  rejectArbitration(id, reason) {
+  rejectAdminArbitration(data) {
     return request({
-      url: `/api/arbitration/admin/reject/${id}`,
+      url: '/api/arbitration/admin/reject',
       method: 'post',
-      params: { reason }
+      data
     })
   },
 
@@ -121,10 +128,26 @@ export const arbitrationApi = {
     })
   },
 
-  getArbitrationStats() {
-    return request({
-      url: '/api/arbitration/admin/stats',
-      method: 'get'
+  // 兼容旧调用
+  acceptArbitration(id) {
+    return this.acceptAdminArbitration(id)
+  },
+
+  handleArbitration(data) {
+    return this.completeAdminArbitration({
+      arbitrationId: data?.arbitrationId ?? data?.id,
+      decisionRemark: data?.decisionRemark ?? data?.result
     })
+  },
+
+  rejectArbitration(id, reason) {
+    return this.rejectAdminArbitration({
+      arbitrationId: id,
+      rejectReason: reason
+    })
+  },
+
+  getArbitrationStats() {
+    return this.getAdminArbitrationStats()
   }
 }

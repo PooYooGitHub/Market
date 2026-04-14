@@ -8,10 +8,12 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.shyu.marketcommon.result.Result;
+import org.shyu.marketservicearbitration.dto.ArbitrationCompleteDTO;
+import org.shyu.marketservicearbitration.dto.ArbitrationRejectDTO;
 import org.shyu.marketservicearbitration.dto.SupplementRequestDTO;
-import org.shyu.marketservicearbitration.entity.ArbitrationEntity;
 import org.shyu.marketservicearbitration.service.IArbitrationService;
-import org.shyu.marketservicearbitration.vo.ArbitrationAdminDetailVO;
+import org.shyu.marketservicearbitration.vo.AdminArbitrationDetailVO;
+import org.shyu.marketservicearbitration.vo.AdminArbitrationListItemVO;
 import org.shyu.marketservicearbitration.vo.ArbitrationStatsVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -20,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.util.Map;
 
 @Api(tags = "仲裁管理")
 @Slf4j
@@ -60,8 +61,8 @@ public class ArbitrationAdminController {
             @ApiParam("关键词") @RequestParam(required = false) String keyword) {
 
         try {
-            IPage<ArbitrationEntity> page = arbitrationService.getArbitrationPage(
-                    current, size, status, null, null, keyword, priority);
+            IPage<AdminArbitrationListItemVO> page = arbitrationService.getAdminArbitrationList(
+                    current, size, status, keyword, priority);
             return Result.success(page);
         } catch (Exception e) {
             log.error("获取管理员仲裁列表失败", e);
@@ -73,7 +74,7 @@ public class ArbitrationAdminController {
     @GetMapping("/detail/{id}")
     public Result<?> getAdminArbitrationDetail(@PathVariable("id") @NotNull Long id) {
         try {
-            ArbitrationAdminDetailVO detail = arbitrationService.getAdminArbitrationDetail(id);
+            AdminArbitrationDetailVO detail = arbitrationService.getAdminArbitrationDetail(id);
             return Result.success(detail);
         } catch (Exception e) {
             log.error("获取仲裁聚合详情失败", e);
@@ -88,7 +89,7 @@ public class ArbitrationAdminController {
         Long handlerId = StpUtil.getLoginIdAsLong();
 
         try {
-            Boolean result = arbitrationService.acceptArbitration(id, handlerId);
+            Boolean result = arbitrationService.acceptAdminArbitration(id, handlerId);
             return result ? Result.success("受理成功", null) : Result.error("受理失败");
         } catch (Exception e) {
             log.error("受理仲裁申请失败", e);
@@ -96,18 +97,13 @@ public class ArbitrationAdminController {
         }
     }
 
-    @ApiOperation("管理员处理仲裁申请")
-    @PostMapping("/handle")
+    @ApiOperation("管理员完结仲裁申请")
+    @PostMapping("/complete")
     @SaCheckLogin
-    public Result<?> handleArbitration(@RequestBody Map<String, Object> data) {
-        Long id = Long.valueOf(String.valueOf(data.get("id")));
-        String resultText = String.valueOf(data.get("result"));
-        Boolean force = data.get("force") != null && Boolean.parseBoolean(String.valueOf(data.get("force")));
-
+    public Result<?> completeArbitration(@Valid @RequestBody ArbitrationCompleteDTO dto) {
         Long handlerId = StpUtil.getLoginIdAsLong();
-
         try {
-            Boolean success = arbitrationService.handleArbitration(id, resultText, handlerId, force);
+            Boolean success = arbitrationService.completeAdminArbitration(dto, handlerId);
             return success ? Result.success("处理成功", null) : Result.error("处理失败");
         } catch (Exception e) {
             log.error("处理仲裁申请失败", e);
@@ -116,21 +112,38 @@ public class ArbitrationAdminController {
     }
 
     @ApiOperation("管理员驳回仲裁申请")
-    @PostMapping("/reject/{id}")
+    @PostMapping("/reject")
     @SaCheckLogin
-    public Result<?> rejectArbitration(
-            @ApiParam("仲裁ID") @PathVariable @NotNull Long id,
-            @ApiParam("驳回原因") @RequestParam @NotBlank String reason) {
-
+    public Result<?> rejectArbitration(@Valid @RequestBody ArbitrationRejectDTO dto) {
         Long handlerId = StpUtil.getLoginIdAsLong();
-
         try {
-            Boolean result = arbitrationService.rejectArbitration(id, reason, handlerId);
+            Boolean result = arbitrationService.rejectAdminArbitration(dto, handlerId);
             return result ? Result.success("驳回成功", null) : Result.error("驳回失败");
         } catch (Exception e) {
             log.error("驳回仲裁申请失败", e);
             return Result.error(e.getMessage());
         }
+    }
+
+    @Deprecated
+    @ApiOperation("管理员处理仲裁申请（兼容旧接口）")
+    @PostMapping("/handle")
+    @SaCheckLogin
+    public Result<?> handleArbitration(@Valid @RequestBody ArbitrationCompleteDTO dto) {
+        return completeArbitration(dto);
+    }
+
+    @Deprecated
+    @ApiOperation("管理员驳回仲裁申请（兼容旧接口）")
+    @PostMapping("/reject/{id}")
+    @SaCheckLogin
+    public Result<?> rejectArbitrationCompat(
+            @ApiParam("仲裁ID") @PathVariable @NotNull Long id,
+            @ApiParam("驳回原因") @RequestParam @NotBlank String reason) {
+        ArbitrationRejectDTO dto = new ArbitrationRejectDTO();
+        dto.setArbitrationId(id);
+        dto.setRejectReason(reason);
+        return rejectArbitration(dto);
     }
 
     @ApiOperation("发起补证请求")

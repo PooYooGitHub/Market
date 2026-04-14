@@ -7,12 +7,18 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.shyu.marketapiarbitration.enums.ArbitrationReason;
+import org.shyu.marketapiarbitration.enums.ArbitrationStatus;
 import org.shyu.marketapiproduct.dto.ProductDTO;
 import org.shyu.marketapiproduct.feign.ProductFeignClient;
 import org.shyu.marketapitrade.dto.OrderDTO;
 import org.shyu.marketapitrade.feign.TradeFeignClient;
+import org.shyu.marketapiuser.dto.UserDTO;
+import org.shyu.marketapiuser.feign.UserFeignClient;
 import org.shyu.marketcommon.exception.BusinessException;
 import org.shyu.marketcommon.result.Result;
+import org.shyu.marketservicearbitration.dto.ArbitrationCompleteDTO;
+import org.shyu.marketservicearbitration.dto.ArbitrationRejectDTO;
 import org.shyu.marketservicearbitration.dto.SupplementRequestDTO;
 import org.shyu.marketservicearbitration.dto.SupplementSubmitDTO;
 import org.shyu.marketservicearbitration.entity.ArbitrationEntity;
@@ -45,7 +51,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
     private static final int PROCESSING = 1;
     private static final int COMPLETED = 2;
     private static final int REJECTED = 3;
-    private static final int WAIT_SUPPLEMENT = 4;
+    private static final int LEGACY_WAIT_SUPPLEMENT = 4;
 
     private static final int SR_PENDING = 0;
     private static final int SR_SUBMITTED = 1;
@@ -61,6 +67,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
     @Autowired private IArbitrationEvidenceSubmissionService evidenceSubmissionService;
     @Autowired private TradeFeignClient tradeFeignClient;
     @Autowired private ProductFeignClient productFeignClient;
+    @Autowired private UserFeignClient userFeignClient;
 
     private final ObjectMapper om = new ObjectMapper();
 
@@ -118,7 +125,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         Page<ArbitrationEntity> p = new Page<>(current, size);
         QueryWrapper<ArbitrationEntity> q = new QueryWrapper<>();
         if (status != null) {
-            if (Objects.equals(status, PROCESSING)) q.in("status", Arrays.asList(PROCESSING, WAIT_SUPPLEMENT));
+            if (Objects.equals(status, PROCESSING)) q.in("status", Arrays.asList(PROCESSING, LEGACY_WAIT_SUPPLEMENT));
             else q.eq("status", status);
         }
         if (applicantId != null) q.eq("applicant_id", applicantId);
@@ -147,47 +154,114 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
     }
 
     @Override
+    public IPage<AdminArbitrationListItemVO> getAdminArbitrationList(Integer current, Integer size,
+                                                                      Integer status, String keyword, String priority) {
+        IPage<ArbitrationEntity> page = getArbitrationPage(current, size, status, null, null, keyword, priority);
+        Page<AdminArbitrationListItemVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        List<AdminArbitrationListItemVO> records = page.getRecords().stream()
+                .map(this::toAdminListItem)
+                .collect(Collectors.toList());
+        voPage.setRecords(records);
+        return voPage;
+    }
+
+    @Override
     @Transactional
-    public Boolean acceptArbitration(Long id, Long handlerId) {
+    public Boolean acceptAdminArbitration(Long id, Long handlerId) {
         ArbitrationEntity e = getById(id);
         if (e == null) throw new BusinessException("仲裁记录不存在");
-        if (!Objects.equals(e.getStatus(), PENDING)) throw new BusinessException("该仲裁申请已被处理，无法重复受理");
-        e.setStatus(PROCESSING); e.setHandlerId(handlerId); e.setUpdateTime(LocalDateTime.now());
+        if (!Objects.equals(normalizeStatus(e.getStatus()), PENDING)) {
+            throw new BusinessException("当前状态不允许受理");
+        }
+        e.setStatus(PROCESSING);
+        e.setHandlerId(handlerId);
+        e.setUpdateTime(LocalDateTime.now());
         if (!updateById(e)) throw new BusinessException("受理仲裁申请失败");
-        log(id, handlerId, "ACCEPT", "管理员受理仲裁申请");
+        log(id, handlerId, "ACCEPT", "平台受理案件");
+        log(id, handlerId, "PROCESSING", "平台处理中");
         return true;
     }
 
     @Override
     @Transactional
-    public Boolean handleArbitration(Long id, String result, Long handlerId) { return handleArbitration(id, result, handlerId, false); }
+    public Boolean completeAdminArbitration(ArbitrationCompleteDTO dto, Long handlerId) {
+        ArbitrationEntity e = getById(dto.getArbitrationId());
+        if (e == null) throw new BusinessException("仲裁记录不存在");
+        if (!Objects.equals(normalizeStatus(e.getStatus()), PROCESSING)) {
+            throw new BusinessException("当前状态不允许完结");
+        }
+
+        String decisionRemark = StringUtils.hasText(dto.getDecisionRemark()) ? dto.getDecisionRemark().trim() : "";
+        if (!StringUtils.hasText(decisionRemark)) throw new BusinessException("decisionRemark不能为空");
+
+        List<ArbitrationSupplementRequestEntity> pending = supplementRequestService.listPendingByArbitrationId(e.getId());
+        if (!pending.isEmpty()) {
+            expireAllPending(e.getId(), handlerId, "案件完结前自动结转待补证请求");
+        }
+
+        e.setStatus(COMPLETED);
+        e.setResult(decisionRemark);
+        e.setHandlerId(handlerId);
+        e.setUpdateTime(LocalDateTime.now());
+        if (!updateById(e)) throw new BusinessException("完结仲裁申请失败");
+        log(e.getId(), handlerId, "COMPLETE", "案件完结：" + decisionRemark);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public Boolean rejectAdminArbitration(ArbitrationRejectDTO dto, Long handlerId) {
+        ArbitrationEntity e = getById(dto.getArbitrationId());
+        if (e == null) throw new BusinessException("仲裁记录不存在");
+        Integer status = normalizeStatus(e.getStatus());
+        if (!Arrays.asList(PENDING, PROCESSING).contains(status)) {
+            throw new BusinessException("当前状态不允许驳回");
+        }
+        String rejectReason = StringUtils.hasText(dto.getRejectReason()) ? dto.getRejectReason().trim() : "";
+        if (!StringUtils.hasText(rejectReason)) throw new BusinessException("rejectReason不能为空");
+
+        List<ArbitrationSupplementRequestEntity> pending = supplementRequestService.listPendingByArbitrationId(e.getId());
+        if (!pending.isEmpty()) {
+            expireAllPending(e.getId(), handlerId, "案件驳回前自动结转待补证请求");
+        }
+
+        e.setStatus(REJECTED);
+        e.setResult("驳回原因：" + rejectReason);
+        e.setHandlerId(handlerId);
+        e.setUpdateTime(LocalDateTime.now());
+        if (!updateById(e)) throw new BusinessException("驳回仲裁申请失败");
+        log(e.getId(), handlerId, "REJECT", "案件驳回：" + rejectReason);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public Boolean acceptArbitration(Long id, Long handlerId) {
+        return acceptAdminArbitration(id, handlerId);
+    }
+
+    @Override
+    @Transactional
+    public Boolean handleArbitration(Long id, String result, Long handlerId) {
+        return handleArbitration(id, result, handlerId, false);
+    }
 
     @Override
     @Transactional
     public Boolean handleArbitration(Long id, String result, Long handlerId, Boolean force) {
-        ArbitrationEntity e = getById(id);
-        if (e == null) throw new BusinessException("仲裁记录不存在");
-        if (!Arrays.asList(PROCESSING, WAIT_SUPPLEMENT).contains(e.getStatus())) throw new BusinessException("该仲裁申请当前状态不允许完结");
-        List<ArbitrationSupplementRequestEntity> pending = supplementRequestService.listPendingByArbitrationId(id);
-        if (!pending.isEmpty() && !Boolean.TRUE.equals(force)) throw new BusinessException("当前仍有待补证请求，若需强制完结请传 force=true");
-        if (!pending.isEmpty()) expireAllPending(id, handlerId, "强制完结前自动结转待补证请求");
-        e.setStatus(COMPLETED); e.setResult(result); e.setHandlerId(handlerId); e.setUpdateTime(LocalDateTime.now());
-        if (!updateById(e)) throw new BusinessException("处理仲裁申请失败");
-        log(id, handlerId, "RESOLVE", Boolean.TRUE.equals(force) ? "仲裁完结（强制）" : "仲裁完结");
-        return true;
+        ArbitrationCompleteDTO dto = new ArbitrationCompleteDTO();
+        dto.setArbitrationId(id);
+        dto.setDecisionRemark(result);
+        return completeAdminArbitration(dto, handlerId);
     }
 
     @Override
     @Transactional
     public Boolean rejectArbitration(Long id, String reason, Long handlerId) {
-        ArbitrationEntity e = getById(id);
-        if (e == null) throw new BusinessException("仲裁记录不存在");
-        if (!Arrays.asList(PENDING, PROCESSING, WAIT_SUPPLEMENT).contains(e.getStatus())) throw new BusinessException("该仲裁申请已被处理，无法驳回");
-        if (Objects.equals(e.getStatus(), WAIT_SUPPLEMENT)) expireAllPending(id, handlerId, "驳回前自动结转待补证请求");
-        e.setStatus(REJECTED); e.setResult("驳回原因：" + reason); e.setHandlerId(handlerId); e.setUpdateTime(LocalDateTime.now());
-        if (!updateById(e)) throw new BusinessException("驳回仲裁申请失败");
-        log(id, handlerId, "REJECT", "驳回仲裁申请：" + reason);
-        return true;
+        ArbitrationRejectDTO dto = new ArbitrationRejectDTO();
+        dto.setArbitrationId(id);
+        dto.setRejectReason(reason);
+        return rejectAdminArbitration(dto, handlerId);
     }
 
     @Override
@@ -196,8 +270,8 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         ArbitrationEntity e = getById(id);
         if (e == null) throw new BusinessException("仲裁记录不存在");
         if (!Objects.equals(e.getApplicantId(), applicantId)) throw new BusinessException("无权限取消该仲裁申请");
-        if (!Arrays.asList(PENDING, WAIT_SUPPLEMENT).contains(e.getStatus())) throw new BusinessException("当前状态不允许取消");
-        if (Objects.equals(e.getStatus(), WAIT_SUPPLEMENT)) {
+        if (!Arrays.asList(PENDING, LEGACY_WAIT_SUPPLEMENT).contains(e.getStatus())) throw new BusinessException("当前状态不允许取消");
+        if (Objects.equals(e.getStatus(), LEGACY_WAIT_SUPPLEMENT)) {
             for (ArbitrationSupplementRequestEntity r : supplementRequestService.listPendingByArbitrationId(id)) {
                 r.setStatus(SR_CANCELED); r.setUpdateTime(LocalDateTime.now()); supplementRequestService.updateById(r);
             }
@@ -215,13 +289,13 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         s.setProcessingCount(Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().eq("status", PROCESSING))));
         s.setCompletedCount(Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().eq("status", COMPLETED))));
         s.setRejectedCount(Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().eq("status", REJECTED))));
-        int supplement = Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().eq("status", WAIT_SUPPLEMENT)));
+        int supplement = Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().eq("status", LEGACY_WAIT_SUPPLEMENT)));
         s.setProcessingCount(s.getProcessingCount() + supplement);
         int total = Math.toIntExact(count(new QueryWrapper<>()));
         s.setTotalCount(total); s.setTotalCases(total);
         s.setTodayNewCount(Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().ge("create_time", LocalDate.now()))));
         s.setTodayCount(s.getTodayNewCount());
-        s.setUrgentCount(Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().in("status", Arrays.asList(PENDING, PROCESSING, WAIT_SUPPLEMENT)).le("create_time", LocalDateTime.now().minusDays(3)))));
+        s.setUrgentCount(Math.toIntExact(count(new QueryWrapper<ArbitrationEntity>().in("status", Arrays.asList(PENDING, PROCESSING, LEGACY_WAIT_SUPPLEMENT)).le("create_time", LocalDateTime.now().minusDays(3)))));
         double avg = avgHandleDays();
         s.setAvgHandleDays(avg); s.setAvgProcessDays(avg);
         s.setResolvedCount(s.getCompletedCount() + s.getRejectedCount());
@@ -235,7 +309,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         int pending=0, processing=0, completed=0, rejected=0;
         for (ArbitrationEntity e : list) {
             if (Objects.equals(e.getStatus(), PENDING)) pending++;
-            else if (Arrays.asList(PROCESSING, WAIT_SUPPLEMENT).contains(e.getStatus())) processing++;
+            else if (Arrays.asList(PROCESSING, LEGACY_WAIT_SUPPLEMENT).contains(e.getStatus())) processing++;
             else if (Objects.equals(e.getStatus(), COMPLETED)) completed++;
             else if (Objects.equals(e.getStatus(), REJECTED)) rejected++;
         }
@@ -266,15 +340,63 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
     }
 
     @Override
-    public ArbitrationAdminDetailVO getAdminArbitrationDetail(Long arbitrationId) {
+    public AdminArbitrationDetailVO getAdminArbitrationDetail(Long arbitrationId) {
         ArbitrationEntity e = getById(arbitrationId);
         if (e == null) throw new BusinessException("仲裁记录不存在");
-        ArbitrationAdminDetailVO vo = new ArbitrationAdminDetailVO();
-        vo.setArbitration(e);
-        vo.setLogs(arbitrationLogService.getLogsByArbitrationId(arbitrationId));
-        vo.setSupplementRequests(supplementRequestService.listByArbitrationId(arbitrationId).stream().map(this::toRequestVO).collect(Collectors.toList()));
-        vo.setEvidenceBundles(buildBundles(e, evidenceSubmissionService.listByArbitrationId(arbitrationId)));
-        vo.setSystemContext(buildSystem(e));
+
+        Integer status = normalizeStatus(e.getStatus());
+        OrderDTO orderDTO = fetchOrder(e.getOrderId());
+        ProductDTO productDTO = orderDTO == null ? null : fetchProduct(orderDTO.getProductId());
+        List<ArbitrationEvidenceSubmissionEntity> submissions = evidenceSubmissionService.listByArbitrationId(arbitrationId);
+        List<ArbitrationLogEntity> logs = arbitrationLogService.getLogsByArbitrationId(arbitrationId);
+        List<ArbitrationSupplementRequestEntity> requests = supplementRequestService.listByArbitrationId(arbitrationId);
+
+        AdminArbitrationDetailVO vo = new AdminArbitrationDetailVO();
+        vo.setId(e.getId());
+        vo.setCaseNumber(buildCaseNumber(e.getId()));
+        vo.setStatus(status);
+        vo.setStatusLabel(statusLabel(status));
+        vo.setReason(e.getReason());
+        vo.setReasonLabel(reasonLabel(e.getReason()));
+        vo.setCreateTime(e.getCreateTime());
+        vo.setUpdateTime(e.getUpdateTime());
+
+        vo.setOrderId(e.getOrderId());
+        vo.setOrderNo(orderDTO == null ? null : orderDTO.getOrderNo());
+        vo.setOrderAmount(orderDTO == null ? null : orderDTO.getAmount());
+        vo.setProductId(orderDTO == null ? null : orderDTO.getProductId());
+        vo.setProductName(productDTO == null ? null : productDTO.getTitle());
+        vo.setProductPrice(productDTO == null ? null : productDTO.getPrice());
+        vo.setProductImage(resolveProductImage(productDTO));
+
+        vo.setApplicantId(e.getApplicantId());
+        vo.setApplicantName(resolveUserName(e.getApplicantId()));
+        vo.setRespondentId(e.getRespondentId());
+        vo.setRespondentName(resolveUserName(e.getRespondentId()));
+        vo.setHandlerId(e.getHandlerId());
+        vo.setHandlerName(resolveHandlerName(e.getHandlerId()));
+
+        vo.setBuyerClaim(resolveBuyerClaim(e, submissions));
+        vo.setSellerClaim(resolveSellerClaim(submissions));
+        vo.setPlatformFocus(resolvePlatformFocus(e, orderDTO, requests));
+        vo.setArbitrationRequest(firstText(e.getDescription(), reasonLabel(e.getReason())));
+
+        vo.setApplicantEvidence(buildEvidenceByRole(e, submissions, BUYER));
+        vo.setRespondentEvidence(buildEvidenceByRole(e, submissions, SELLER));
+        vo.setSystemEvidence(buildSystemEvidence(e, orderDTO, productDTO, requests));
+        vo.setChatSummary(buildChatSummary(submissions));
+        vo.setOrderSnapshot(buildOrderSnapshot(orderDTO));
+        vo.setProductSnapshot(buildProductSnapshot(productDTO));
+        vo.setTimeline(buildTimeline(logs));
+
+        String result = StringUtils.hasText(e.getResult()) ? e.getResult().trim() : "";
+        vo.setDecisionRemark(status == COMPLETED ? result : "");
+        vo.setRejectReason(status == REJECTED ? stripRejectPrefix(result) : "");
+
+        vo.setCanAccept(status == PENDING);
+        vo.setCanComplete(status == PROCESSING);
+        vo.setCanReject(status == PENDING || status == PROCESSING);
+        vo.setReadonly(status == COMPLETED || status == REJECTED);
         return vo;
     }
 
@@ -283,13 +405,16 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
     public Boolean requestSupplement(SupplementRequestDTO dto, Long handlerId) {
         ArbitrationEntity e = getById(dto.getArbitrationId());
         if (e == null) throw new BusinessException("仲裁记录不存在");
-        if (!Arrays.asList(PENDING, PROCESSING, WAIT_SUPPLEMENT).contains(e.getStatus())) throw new BusinessException("当前仲裁状态不允许发起补证");
+        if (!Arrays.asList(PENDING, PROCESSING, LEGACY_WAIT_SUPPLEMENT).contains(e.getStatus())) throw new BusinessException("当前仲裁状态不允许发起补证");
         String target = normalizeTarget(dto.getTargetParty());
         int hours = dto.getDueHours() == null || dto.getDueHours() <= 0 ? 48 : dto.getDueHours();
         ArbitrationSupplementRequestEntity r = new ArbitrationSupplementRequestEntity();
         r.setArbitrationId(e.getId()); r.setRequestedBy(handlerId); r.setTargetParty(target); r.setRequiredItems(dto.getRequiredItems()); r.setRemark(dto.getRemark()); r.setDueTime(LocalDateTime.now().plusHours(hours)); r.setStatus(SR_PENDING);
         if (!supplementRequestService.save(r)) throw new BusinessException("发起补证失败");
-        e.setStatus(WAIT_SUPPLEMENT); e.setHandlerId(handlerId); e.setUpdateTime(LocalDateTime.now()); updateById(e);
+        if (Objects.equals(e.getStatus(), PENDING) || Objects.equals(e.getStatus(), LEGACY_WAIT_SUPPLEMENT)) {
+            e.setStatus(PROCESSING);
+        }
+        e.setHandlerId(handlerId); e.setUpdateTime(LocalDateTime.now()); updateById(e);
         log(e.getId(), handlerId, "SUPPLEMENT_REQUEST", "发起补证，目标=" + target + "，要求=" + dto.getRequiredItems());
         return true;
     }
@@ -313,7 +438,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
             req.setStatus(SR_SUBMITTED); req.setUpdateTime(LocalDateTime.now()); supplementRequestService.updateById(req);
             log(e.getId(), submitterId, "SUPPLEMENT_COMPLETE", "补证请求已满足");
         }
-        if (supplementRequestService.listPendingByArbitrationId(e.getId()).isEmpty() && Objects.equals(e.getStatus(), WAIT_SUPPLEMENT)) {
+        if (supplementRequestService.listPendingByArbitrationId(e.getId()).isEmpty() && Objects.equals(e.getStatus(), LEGACY_WAIT_SUPPLEMENT)) {
             e.setStatus(PROCESSING); e.setUpdateTime(LocalDateTime.now()); updateById(e);
         }
         return true;
@@ -327,7 +452,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         if (!Objects.equals(r.getStatus(), SR_PENDING)) throw new BusinessException("补证请求已处理，无需结转");
         r.setStatus(SR_EXPIRED); r.setUpdateTime(LocalDateTime.now()); supplementRequestService.updateById(r);
         ArbitrationEntity e = getById(r.getArbitrationId());
-        if (e != null && supplementRequestService.listPendingByArbitrationId(e.getId()).isEmpty() && Objects.equals(e.getStatus(), WAIT_SUPPLEMENT)) {
+        if (e != null && supplementRequestService.listPendingByArbitrationId(e.getId()).isEmpty() && Objects.equals(e.getStatus(), LEGACY_WAIT_SUPPLEMENT)) {
             e.setStatus(PROCESSING); e.setUpdateTime(LocalDateTime.now()); updateById(e);
         }
         log(r.getArbitrationId(), operatorId, "SUPPLEMENT_EXPIRED", "补证请求超时，按不利事实继续裁决");
@@ -339,6 +464,348 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
             r.setStatus(SR_EXPIRED); r.setUpdateTime(LocalDateTime.now()); supplementRequestService.updateById(r);
             log(arbitrationId, operatorId, "SUPPLEMENT_EXPIRED", prefix + "，requestId=" + r.getId());
         }
+    }
+
+    private AdminArbitrationListItemVO toAdminListItem(ArbitrationEntity e) {
+        AdminArbitrationListItemVO vo = new AdminArbitrationListItemVO();
+        OrderDTO orderDTO = fetchOrder(e.getOrderId());
+        Integer status = normalizeStatus(e.getStatus());
+        vo.setId(e.getId());
+        vo.setCaseNumber(buildCaseNumber(e.getId()));
+        vo.setStatus(status);
+        vo.setStatusLabel(statusLabel(status));
+        vo.setReason(e.getReason());
+        vo.setReasonLabel(reasonLabel(e.getReason()));
+        vo.setTitle(firstText(e.getDescription(), vo.getReasonLabel()));
+        vo.setDescription(e.getDescription());
+        vo.setResult(e.getResult());
+        vo.setOrderId(e.getOrderId());
+        vo.setOrderNo(orderDTO == null ? null : orderDTO.getOrderNo());
+        vo.setOrderAmount(orderDTO == null ? null : orderDTO.getAmount());
+        vo.setApplicantId(e.getApplicantId());
+        vo.setApplicantName(resolveUserName(e.getApplicantId()));
+        vo.setRespondentId(e.getRespondentId());
+        vo.setRespondentName(resolveUserName(e.getRespondentId()));
+        vo.setHandlerId(e.getHandlerId());
+        vo.setHandlerName(resolveHandlerName(e.getHandlerId()));
+        vo.setCreateTime(e.getCreateTime());
+        vo.setUpdateTime(e.getUpdateTime());
+        return vo;
+    }
+
+    private List<ArbitrationEvidenceVO> buildEvidenceByRole(ArbitrationEntity arbitration,
+                                                             List<ArbitrationEvidenceSubmissionEntity> submissions,
+                                                             String role) {
+        List<ArbitrationEvidenceVO> evidenceList = new ArrayList<>();
+        List<ArbitrationEvidenceSubmissionEntity> roleSubs = submissions.stream()
+                .filter(x -> role.equalsIgnoreCase(String.valueOf(x.getSubmitterRole())))
+                .sorted(Comparator.comparing(ArbitrationEvidenceSubmissionEntity::getCreateTime,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+
+        for (ArbitrationEvidenceSubmissionEntity sub : roleSubs) {
+            if (StringUtils.hasText(sub.getClaimText())) {
+                ArbitrationEvidenceVO claim = new ArbitrationEvidenceVO();
+                claim.setId(sub.getId());
+                claim.setType("text");
+                claim.setTitle("主张说明");
+                claim.setDescription(sub.getClaimText());
+                claim.setCreateTime(sub.getCreateTime());
+                evidenceList.add(claim);
+            }
+            if (StringUtils.hasText(sub.getFactText())) {
+                ArbitrationEvidenceVO fact = new ArbitrationEvidenceVO();
+                fact.setId(sub.getId());
+                fact.setType("text");
+                fact.setTitle("事实补充");
+                fact.setDescription(sub.getFactText());
+                fact.setCreateTime(sub.getCreateTime());
+                evidenceList.add(fact);
+            }
+            List<String> urls = parseJson(sub.getEvidenceUrls());
+            for (int i = 0; i < urls.size(); i++) {
+                String url = urls.get(i);
+                long baseId = sub.getId() == null ? 0L : sub.getId();
+                ArbitrationEvidenceVO image = new ArbitrationEvidenceVO();
+                image.setId(baseId * 100 + i + 1);
+                image.setType("image");
+                image.setTitle("证据图片");
+                image.setDescription(StringUtils.hasText(sub.getNote()) ? sub.getNote() : "提交图片证据");
+                image.setUrl(url);
+                image.setThumbnail(url);
+                image.setCreateTime(sub.getCreateTime());
+                evidenceList.add(image);
+            }
+        }
+
+        if (evidenceList.isEmpty() && BUYER.equals(role) && StringUtils.hasText(arbitration.getEvidence())) {
+            List<String> urls = parseJson(arbitration.getEvidence());
+            for (int i = 0; i < urls.size(); i++) {
+                long arbitrationId = arbitration.getId() == null ? 0L : arbitration.getId();
+                ArbitrationEvidenceVO image = new ArbitrationEvidenceVO();
+                image.setId(arbitrationId * 1000 + i + 1);
+                image.setType("image");
+                image.setTitle("初始证据");
+                image.setDescription("申请仲裁时上传");
+                image.setUrl(urls.get(i));
+                image.setThumbnail(urls.get(i));
+                image.setCreateTime(arbitration.getCreateTime());
+                evidenceList.add(image);
+            }
+        }
+        return evidenceList;
+    }
+
+    private List<ArbitrationEvidenceVO> buildSystemEvidence(ArbitrationEntity arbitration,
+                                                            OrderDTO orderDTO,
+                                                            ProductDTO productDTO,
+                                                            List<ArbitrationSupplementRequestEntity> requests) {
+        List<ArbitrationEvidenceVO> list = new ArrayList<>();
+
+        ArbitrationEvidenceVO statusEvidence = new ArbitrationEvidenceVO();
+        statusEvidence.setId(arbitration.getId() * 10 + 1);
+        statusEvidence.setType("system");
+        statusEvidence.setTitle("平台状态记录");
+        statusEvidence.setDescription("案件当前状态：" + statusLabel(normalizeStatus(arbitration.getStatus())));
+        statusEvidence.setCreateTime(arbitration.getUpdateTime() == null ? arbitration.getCreateTime() : arbitration.getUpdateTime());
+        list.add(statusEvidence);
+
+        if (orderDTO != null) {
+            ArbitrationEvidenceVO orderEvidence = new ArbitrationEvidenceVO();
+            orderEvidence.setId(arbitration.getId() * 10 + 2);
+            orderEvidence.setType("system");
+            orderEvidence.setTitle("订单快照");
+            orderEvidence.setDescription("订单号：" + firstText(orderDTO.getOrderNo(), "-")
+                    + "，金额：" + (orderDTO.getAmount() == null ? "-" : orderDTO.getAmount().toPlainString()));
+            orderEvidence.setCreateTime(orderDTO.getUpdateTime() == null ? orderDTO.getCreateTime() : orderDTO.getUpdateTime());
+            list.add(orderEvidence);
+        }
+
+        if (productDTO != null) {
+            ArbitrationEvidenceVO productEvidence = new ArbitrationEvidenceVO();
+            productEvidence.setId(arbitration.getId() * 10 + 3);
+            productEvidence.setType("system");
+            productEvidence.setTitle("商品快照");
+            productEvidence.setDescription(firstText(productDTO.getTitle(), "商品信息") + "，标价："
+                    + (productDTO.getPrice() == null ? "-" : productDTO.getPrice().toPlainString()));
+            productEvidence.setUrl(resolveProductImage(productDTO));
+            productEvidence.setThumbnail(resolveProductImage(productDTO));
+            productEvidence.setCreateTime(productDTO.getUpdateTime() == null ? productDTO.getCreateTime() : productDTO.getUpdateTime());
+            list.add(productEvidence);
+        }
+
+        for (ArbitrationSupplementRequestEntity request : requests) {
+            ArbitrationEvidenceVO requestEvidence = new ArbitrationEvidenceVO();
+            requestEvidence.setId(request.getId());
+            requestEvidence.setType("system");
+            requestEvidence.setTitle("补证请求");
+            requestEvidence.setDescription("对象：" + request.getTargetParty() + "，要求：" + request.getRequiredItems());
+            requestEvidence.setCreateTime(request.getCreateTime());
+            list.add(requestEvidence);
+        }
+        return list;
+    }
+
+    private List<ArbitrationChatSummaryVO> buildChatSummary(List<ArbitrationEvidenceSubmissionEntity> submissions) {
+        List<ArbitrationChatSummaryVO> list = new ArrayList<>();
+        long seed = 1L;
+        for (ArbitrationEvidenceSubmissionEntity sub : submissions) {
+            String speaker = BUYER.equalsIgnoreCase(sub.getSubmitterRole()) ? "买家" :
+                    (SELLER.equalsIgnoreCase(sub.getSubmitterRole()) ? "卖家" : "平台");
+            if (StringUtils.hasText(sub.getClaimText())) {
+                ArbitrationChatSummaryVO item = new ArbitrationChatSummaryVO();
+                item.setId(seed++);
+                item.setSpeaker(speaker);
+                item.setTime(sub.getCreateTime());
+                item.setContent(sub.getClaimText());
+                list.add(item);
+            }
+            if (StringUtils.hasText(sub.getFactText())) {
+                ArbitrationChatSummaryVO item = new ArbitrationChatSummaryVO();
+                item.setId(seed++);
+                item.setSpeaker(speaker);
+                item.setTime(sub.getCreateTime());
+                item.setContent(sub.getFactText());
+                list.add(item);
+            }
+        }
+        if (list.isEmpty()) {
+            ArbitrationChatSummaryVO item = new ArbitrationChatSummaryVO();
+            item.setId(1L);
+            item.setSpeaker("平台");
+            item.setTime(LocalDateTime.now());
+            item.setContent("暂无可提取的聊天摘要，建议结合订单与证据材料判定。");
+            list.add(item);
+        }
+        return list;
+    }
+
+    private List<ArbitrationTimelineVO> buildTimeline(List<ArbitrationLogEntity> logs) {
+        List<ArbitrationTimelineVO> timeline = new ArrayList<>();
+        for (ArbitrationLogEntity logEntity : logs) {
+            ArbitrationTimelineVO item = new ArbitrationTimelineVO();
+            item.setId(logEntity.getId());
+            item.setTime(logEntity.getCreateTime());
+            item.setTitle(timelineTitle(logEntity.getAction()));
+            item.setDescription(firstText(logEntity.getRemark(), "无备注"));
+            item.setColor(timelineColor(logEntity.getAction()));
+            timeline.add(item);
+        }
+        timeline.sort(Comparator.comparing(ArbitrationTimelineVO::getTime, Comparator.nullsLast(Comparator.naturalOrder())));
+        return timeline;
+    }
+
+    private Map<String, Object> buildOrderSnapshot(OrderDTO orderDTO) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (orderDTO == null) {
+            map.put("note", "暂无订单快照");
+            return map;
+        }
+        map.put("orderId", orderDTO.getId());
+        map.put("orderNo", orderDTO.getOrderNo());
+        map.put("status", orderDTO.getStatus());
+        map.put("amount", orderDTO.getAmount());
+        map.put("buyerId", orderDTO.getBuyerId());
+        map.put("sellerId", orderDTO.getSellerId());
+        map.put("createTime", orderDTO.getCreateTime());
+        map.put("updateTime", orderDTO.getUpdateTime());
+        return map;
+    }
+
+    private Map<String, Object> buildProductSnapshot(ProductDTO productDTO) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (productDTO == null) {
+            map.put("description", "暂无商品快照");
+            return map;
+        }
+        map.put("productId", productDTO.getId());
+        map.put("title", productDTO.getTitle());
+        map.put("description", productDTO.getDescription());
+        map.put("price", productDTO.getPrice());
+        map.put("status", productDTO.getStatus());
+        map.put("imageUrls", productDTO.getImageUrls());
+        return map;
+    }
+
+    private Integer normalizeStatus(Integer status) {
+        if (Objects.equals(status, LEGACY_WAIT_SUPPLEMENT)) {
+            return PROCESSING;
+        }
+        return status == null ? PENDING : status;
+    }
+
+    private String statusLabel(Integer status) {
+        return ArbitrationStatus.getByCode(normalizeStatus(status)).getName();
+    }
+
+    private String reasonLabel(String reason) {
+        return ArbitrationReason.getByCode(reason).getDescription();
+    }
+
+    private String buildCaseNumber(Long id) {
+        return "ARB" + String.format("%06d", id == null ? 0L : id);
+    }
+
+    private String resolveUserName(Long userId) {
+        if (userId == null) return "未知用户";
+        try {
+            Result<UserDTO> result = userFeignClient.getUserById(userId);
+            if (result != null && result.isSuccess() && result.getData() != null) {
+                UserDTO user = result.getData();
+                return firstText(user.getNickname(), user.getUsername(), "用户" + userId);
+            }
+        } catch (Exception e) {
+            log.warn("fetch user failed, userId={}", userId, e);
+        }
+        return "用户" + userId;
+    }
+
+    private String resolveHandlerName(Long handlerId) {
+        if (handlerId == null) return "待分配";
+        return resolveUserName(handlerId);
+    }
+
+    private String resolveBuyerClaim(ArbitrationEntity arbitration, List<ArbitrationEvidenceSubmissionEntity> submissions) {
+        Optional<ArbitrationEvidenceSubmissionEntity> latestBuyer = submissions.stream()
+                .filter(x -> BUYER.equalsIgnoreCase(x.getSubmitterRole()))
+                .max(Comparator.comparing(ArbitrationEvidenceSubmissionEntity::getCreateTime,
+                        Comparator.nullsLast(Comparator.naturalOrder())));
+        if (latestBuyer.isPresent()) {
+            return firstText(latestBuyer.get().getClaimText(), latestBuyer.get().getFactText(),
+                    arbitration.getDescription(), "暂无买家主张");
+        }
+        return firstText(arbitration.getDescription(), "暂无买家主张");
+    }
+
+    private String resolveSellerClaim(List<ArbitrationEvidenceSubmissionEntity> submissions) {
+        Optional<ArbitrationEvidenceSubmissionEntity> latestSeller = submissions.stream()
+                .filter(x -> SELLER.equalsIgnoreCase(x.getSubmitterRole()))
+                .max(Comparator.comparing(ArbitrationEvidenceSubmissionEntity::getCreateTime,
+                        Comparator.nullsLast(Comparator.naturalOrder())));
+        if (!latestSeller.isPresent()) return "暂无卖家主张";
+        return firstText(latestSeller.get().getClaimText(), latestSeller.get().getFactText(), "暂无卖家主张");
+    }
+
+    private String resolvePlatformFocus(ArbitrationEntity arbitration, OrderDTO orderDTO,
+                                        List<ArbitrationSupplementRequestEntity> requests) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("争议类型：").append(reasonLabel(arbitration.getReason()));
+        if (orderDTO != null && orderDTO.getAmount() != null) {
+            builder.append("；订单金额：").append(orderDTO.getAmount().toPlainString());
+        }
+        if (!requests.isEmpty()) {
+            builder.append("；当前存在补证请求 ").append(requests.size()).append(" 条");
+        }
+        return builder.toString();
+    }
+
+    private String resolveProductImage(ProductDTO productDTO) {
+        if (productDTO == null) return "";
+        if (StringUtils.hasText(productDTO.getCoverImage())) return productDTO.getCoverImage();
+        if (productDTO.getImageUrls() != null && !productDTO.getImageUrls().isEmpty()) {
+            return productDTO.getImageUrls().get(0);
+        }
+        return "";
+    }
+
+    private String stripRejectPrefix(String result) {
+        if (!StringUtils.hasText(result)) return "";
+        String text = result.trim();
+        String prefix = "驳回原因：";
+        return text.startsWith(prefix) ? text.substring(prefix.length()) : text;
+    }
+
+    private String timelineTitle(String action) {
+        if (!StringUtils.hasText(action)) return "处理记录";
+        String a = action.trim().toUpperCase(Locale.ROOT);
+        if ("SUBMIT".equals(a)) return "发起仲裁";
+        if ("ACCEPT".equals(a)) return "平台受理";
+        if ("SUPPLEMENT_SUBMIT".equals(a) || "SUPPLEMENT_COMPLETE".equals(a) || "UPDATE".equals(a)) return "补充证据";
+        if ("PROCESSING".equals(a) || "SUPPLEMENT_REQUEST".equals(a) || "SUPPLEMENT_EXPIRED".equals(a)) return "平台处理中";
+        if ("COMPLETE".equals(a) || "RESOLVE".equals(a)) return "案件完结";
+        if ("REJECT".equals(a) || "CANCEL".equals(a)) return "案件驳回";
+        return "处理记录";
+    }
+
+    private String timelineColor(String action) {
+        if (!StringUtils.hasText(action)) return "#909399";
+        String a = action.trim().toUpperCase(Locale.ROOT);
+        if ("SUBMIT".equals(a)) return "#E6A23C";
+        if ("ACCEPT".equals(a) || "PROCESSING".equals(a) || "SUPPLEMENT_REQUEST".equals(a)
+                || "SUPPLEMENT_SUBMIT".equals(a) || "SUPPLEMENT_COMPLETE".equals(a) || "SUPPLEMENT_EXPIRED".equals(a)) {
+            return "#409EFF";
+        }
+        if ("COMPLETE".equals(a) || "RESOLVE".equals(a)) return "#67C23A";
+        if ("REJECT".equals(a) || "CANCEL".equals(a)) return "#F56C6C";
+        return "#909399";
+    }
+
+    private String firstText(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (StringUtils.hasText(value)) return value.trim();
+        }
+        return "";
     }
 
     private ArbitrationSupplementRequestEntity resolveReq(Long arbitrationId, Long requestId, String role) {
