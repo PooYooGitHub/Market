@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.shyu.marketservicearbitration.mapper.DisputeRequestMapper">
+
+    <resultMap id="BaseResultMap" type="org.shyu.marketservicearbitration.entity.DisputeRequestEntity">
+        <id column="id" property="id"/>
+        <result column="order_id" property="orderId"/>
+        <result column="product_id" property="productId"/>
+        <result column="buyer_id" property="buyerId"/>
+        <result column="seller_id" property="sellerId"/>
+        <result column="reason" property="reason"/>
+        <result column="fact_description" property="factDescription"/>
+        <result column="request_type" property="requestType"/>
+        <result column="request_description" property="requestDescription"/>
+        <result column="expected_amount" property="expectedAmount"/>
+        <result column="status" property="status"/>
+        <result column="current_round" property="currentRound"/>
+        <result column="seller_response_type" property="sellerResponseType"/>
+        <result column="seller_response_description" property="sellerResponseDescription"/>
+        <result column="seller_response_proposal_type" property="sellerResponseProposalType"/>
+        <result column="seller_response_amount" property="sellerResponseAmount"/>
+        <result column="seller_response_freight_bearer" property="sellerResponseFreightBearer"/>
+        <result column="escalated_arbitration_id" property="escalatedArbitrationId"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+</mapper>

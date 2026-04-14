@@ -39,6 +39,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -201,6 +202,8 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
 
         e.setStatus(COMPLETED);
         e.setResult(decisionRemark);
+        e.setDecisionRemark(decisionRemark);
+        e.setRejectReason(null);
         e.setHandlerId(handlerId);
         e.setUpdateTime(LocalDateTime.now());
         if (!updateById(e)) throw new BusinessException("完结仲裁申请失败");
@@ -227,6 +230,8 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
 
         e.setStatus(REJECTED);
         e.setResult("驳回原因：" + rejectReason);
+        e.setDecisionRemark(null);
+        e.setRejectReason(rejectReason);
         e.setHandlerId(handlerId);
         e.setUpdateTime(LocalDateTime.now());
         if (!updateById(e)) throw new BusinessException("驳回仲裁申请失败");
@@ -276,7 +281,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
                 r.setStatus(SR_CANCELED); r.setUpdateTime(LocalDateTime.now()); supplementRequestService.updateById(r);
             }
         }
-        e.setStatus(REJECTED); e.setResult("申请人已取消仲裁申请"); e.setUpdateTime(LocalDateTime.now());
+        e.setStatus(REJECTED); e.setResult("申请人已取消仲裁申请"); e.setDecisionRemark(null); e.setRejectReason("申请人主动取消"); e.setUpdateTime(LocalDateTime.now());
         if (!updateById(e)) throw new BusinessException("取消仲裁申请失败");
         log(id, applicantId, "CANCEL", "用户取消仲裁申请");
         return true;
@@ -368,6 +373,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         vo.setProductName(productDTO == null ? null : productDTO.getTitle());
         vo.setProductPrice(productDTO == null ? null : productDTO.getPrice());
         vo.setProductImage(resolveProductImage(productDTO));
+        vo.setSourceDisputeId(e.getSourceDisputeId());
 
         vo.setApplicantId(e.getApplicantId());
         vo.setApplicantName(resolveUserName(e.getApplicantId()));
@@ -376,10 +382,11 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         vo.setHandlerId(e.getHandlerId());
         vo.setHandlerName(resolveHandlerName(e.getHandlerId()));
 
-        vo.setBuyerClaim(resolveBuyerClaim(e, submissions));
+        vo.setBuyerClaim(firstText(e.getBuyerClaim(), resolveBuyerClaim(e, submissions)));
         vo.setSellerClaim(resolveSellerClaim(submissions));
         vo.setPlatformFocus(resolvePlatformFocus(e, orderDTO, requests));
-        vo.setArbitrationRequest(firstText(e.getDescription(), reasonLabel(e.getReason())));
+        vo.setArbitrationRequest(firstText(e.getRequestDescription(), e.getDescription(), reasonLabel(e.getReason())));
+        vo.setNegotiationSummary(buildNegotiationSummary(submissions));
 
         vo.setApplicantEvidence(buildEvidenceByRole(e, submissions, BUYER));
         vo.setRespondentEvidence(buildEvidenceByRole(e, submissions, SELLER));
@@ -390,8 +397,8 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         vo.setTimeline(buildTimeline(logs));
 
         String result = StringUtils.hasText(e.getResult()) ? e.getResult().trim() : "";
-        vo.setDecisionRemark(status == COMPLETED ? result : "");
-        vo.setRejectReason(status == REJECTED ? stripRejectPrefix(result) : "");
+        vo.setDecisionRemark(status == COMPLETED ? firstText(e.getDecisionRemark(), result) : "");
+        vo.setRejectReason(status == REJECTED ? firstText(e.getRejectReason(), stripRejectPrefix(result)) : "");
 
         vo.setCanAccept(status == PENDING);
         vo.setCanComplete(status == PROCESSING);
@@ -638,6 +645,28 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
             list.add(item);
         }
         return list;
+    }
+
+    private String buildNegotiationSummary(List<ArbitrationEvidenceSubmissionEntity> submissions) {
+        if (submissions == null || submissions.isEmpty()) {
+            return "暂无协商记录摘要";
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        StringBuilder builder = new StringBuilder("协商摘要：");
+        int count = 0;
+        for (ArbitrationEvidenceSubmissionEntity sub : submissions) {
+            if (count >= 8) {
+                builder.append("...（其余省略）");
+                break;
+            }
+            String role = BUYER.equalsIgnoreCase(sub.getSubmitterRole()) ? "买家"
+                    : (SELLER.equalsIgnoreCase(sub.getSubmitterRole()) ? "卖家" : "系统");
+            String content = firstText(sub.getClaimText(), sub.getFactText(), sub.getNote(), "-");
+            builder.append("[").append(sub.getCreateTime() == null ? "-" : formatter.format(sub.getCreateTime()))
+                    .append("] ").append(role).append("：").append(content).append("；");
+            count++;
+        }
+        return builder.toString();
     }
 
     private List<ArbitrationTimelineVO> buildTimeline(List<ArbitrationLogEntity> logs) {

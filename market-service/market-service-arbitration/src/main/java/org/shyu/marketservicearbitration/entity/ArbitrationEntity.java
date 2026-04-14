@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -63,6 +64,21 @@ public class ArbitrationEntity implements Serializable {
     @TableField("evidence")
     private String evidence;
 
+    @TableField("source_dispute_id")
+    private Long sourceDisputeId;
+
+    @TableField("request_type")
+    private String requestType;
+
+    @TableField("request_description")
+    private String requestDescription;
+
+    @TableField("expected_amount")
+    private BigDecimal expectedAmount;
+
+    @TableField("buyer_claim")
+    private String buyerClaim;
+
     /**
      * 状态 0:待处理 1:处理中 2:已完结 3:已驳回
      */
@@ -74,6 +90,12 @@ public class ArbitrationEntity implements Serializable {
      */
     @TableField("result")
     private String result;
+
+    @TableField("decision_remark")
+    private String decisionRemark;
+
+    @TableField("reject_reason")
+    private String rejectReason;
 
     /**
      * 处理管理员ID

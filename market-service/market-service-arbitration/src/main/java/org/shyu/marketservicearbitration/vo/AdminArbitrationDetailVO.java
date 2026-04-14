@@ -42,6 +42,8 @@ public class AdminArbitrationDetailVO {
 
     private String productImage;
 
+    private Long sourceDisputeId;
+
     private Long applicantId;
 
     private String applicantName;
@@ -61,6 +63,8 @@ public class AdminArbitrationDetailVO {
     private String platformFocus;
 
     private String arbitrationRequest;
+
+    private String negotiationSummary;
 
     private List<ArbitrationEvidenceVO> applicantEvidence = new ArrayList<>();
 

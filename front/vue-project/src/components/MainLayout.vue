@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="main-layout">
-    <!-- 顶部导航栏 -->
+    <!-- 椤堕儴瀵艰埅鏍?-->
     <el-header class="header">
       <div class="header-content">
         <div class="logo-section" @click="$router.push('/')">
@@ -9,7 +9,7 @@
               <ShoppingBag />
             </el-icon>
             <div class="logo-text">
-              跳蚤<br/>市场
+              璺宠殼<br/>甯傚満
             </div>
           </div>
         </div>
@@ -23,41 +23,44 @@
         >
           <el-menu-item index="/">
             <el-icon><HomeFilled /></el-icon>
-            首页
+            棣栭〉
           </el-menu-item>
           <el-menu-item index="/products">
             <el-icon><Goods /></el-icon>
-            商品列表
+            鍟嗗搧鍒楄〃
           </el-menu-item>
 
           <template v-if="userStore.isLoggedIn">
             <el-menu-item index="/product/publish">
               <el-icon><Plus /></el-icon>
-              发布商品
+              鍙戝竷鍟嗗搧
             </el-menu-item>
             <el-menu-item index="/my-products">
               <el-icon><Box /></el-icon>
-              我的商品
+              鎴戠殑鍟嗗搧
             </el-menu-item>
             <el-menu-item index="/cart">
               <el-icon><ShoppingCart /></el-icon>
-              购物车
-            </el-menu-item>
+              璐墿杞?            </el-menu-item>
             <el-menu-item index="/orders">
               <el-icon><Tickets /></el-icon>
-              我的订单
+              鎴戠殑璁㈠崟
             </el-menu-item>
             <el-menu-item index="/messages">
               <el-icon><ChatDotRound /></el-icon>
-              消息
+              娑堟伅
             </el-menu-item>
             <el-menu-item index="/credit">
               <el-icon><Medal /></el-icon>
-              我的信用
+              鎴戠殑淇＄敤
             </el-menu-item>
-            <el-menu-item index="/arbitration/list">
+            <el-menu-item index="/dispute/my">
               <el-icon><DocumentChecked /></el-icon>
-              我的仲裁
+              争议协商
+            </el-menu-item>
+            <el-menu-item index="/dispute/seller/pending">
+              <el-icon><DocumentChecked /></el-icon>
+              卖家协商
             </el-menu-item>
           </template>
         </el-menu>
@@ -76,44 +79,43 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="profile">
                     <el-icon><User /></el-icon>
-                    个人中心
+                    涓汉涓績
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>
-                    退出登录
-                  </el-dropdown-item>
+                    閫€鍑虹櫥褰?                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
           </template>
           <template v-else>
             <el-button-group>
-              <el-button @click="$router.push('/login')">登录</el-button>
-              <el-button type="primary" @click="$router.push('/register')">注册</el-button>
+              <el-button @click="$router.push('/login')">鐧诲綍</el-button>
+              <el-button type="primary" @click="$router.push('/register')">娉ㄥ唽</el-button>
             </el-button-group>
           </template>
         </div>
       </div>
     </el-header>
 
-    <!-- 主内容区 -->
+    <!-- 涓诲唴瀹瑰尯 -->
     <el-main class="main-content">
       <router-view />
     </el-main>
 
-    <!-- 页脚 -->
+    <!-- 椤佃剼 -->
     <el-footer class="footer">
       <div class="footer-content">
         <div class="footer-info">
-          <p>&copy; 2026 校园跳蚤市场</p>
-          <p>基于 SpringCloud 微服务架构 | Vue 3 + Element Plus</p>
+          <p>&copy; 2026 鏍″洯璺宠殼甯傚満</p>
+          <p>鍩轰簬 SpringCloud 寰湇鍔℃灦鏋?| Vue 3 + Element Plus</p>
         </div>
         <div class="footer-links">
-          <el-link href="#" underline="never">关于我们</el-link>
+          <el-link href="#" underline="never">鍏充簬鎴戜滑</el-link>
           <el-divider direction="vertical" />
-          <el-link href="#" underline="never">帮助中心</el-link>
+          <el-link href="#" underline="never">甯姪涓績</el-link>
           <el-divider direction="vertical" />
-          <el-link href="#" underline="never">联系我们</el-link>
+          <el-link href="#" underline="never">鑱旂郴鎴戜滑</el-link>
         </div>
       </div>
     </el-footer>
@@ -166,7 +168,7 @@ const handleCommand = async (command) => {
 
 // 启动用户仲裁状态轮询
 onMounted(() => {
-  // 延迟启动轮询，确保 token 已经完全保存和加载
+  // 延迟启动轮询，确保 token 已经加载完成
   setTimeout(() => {
     if (userStore.isLoggedIn) {
       console.log('启动用户仲裁轮询，token:', userStore.token ? '存在' : '不存在')
@@ -174,7 +176,7 @@ onMounted(() => {
     } else {
       console.log('用户未登录，跳过仲裁轮询启动')
     }
-  }, 500) // 延迟500ms启动
+  }, 500) // 延迟 500ms 启动
 })
 
 onBeforeUnmount(() => {
@@ -254,7 +256,7 @@ onBeforeUnmount(() => {
   max-width: none;
 }
 
-/* 菜单项样式优化 */
+/* 鑿滃崟椤规牱寮忎紭鍖?*/
 .nav-menu .el-menu-item {
   color: #4a5568;
   font-weight: 500;
@@ -329,7 +331,7 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-/* 响应式设计 */
+/* 鍝嶅簲寮忚璁?*/
 @media (max-width: 1024px) {
   .nav-menu {
     margin: 0 15px;

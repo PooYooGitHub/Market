@@ -40,6 +40,10 @@
         <span class="label">当前处理人</span>
         <span class="value">{{ caseData.handler || '-' }}</span>
       </div>
+      <div class="summary-item">
+        <span class="label">来源争议ID</span>
+        <span class="value">{{ caseData.sourceDisputeId || '-' }}</span>
+      </div>
     </div>
 
     <div class="summary-actions">

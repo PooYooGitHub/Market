@@ -149,5 +149,67 @@ export const arbitrationApi = {
 
   getArbitrationStats() {
     return this.getAdminArbitrationStats()
+  },
+
+  createDispute(data) {
+    return request({
+      url: '/api/dispute/create',
+      method: 'post',
+      data
+    })
+  },
+
+  getMyDisputeList(params) {
+    return request({
+      url: '/api/dispute/my',
+      method: 'get',
+      params
+    })
+  },
+
+  getDisputeDetail(id) {
+    return request({
+      url: `/api/dispute/detail/${id}`,
+      method: 'get'
+    })
+  },
+
+  escalateDispute(data) {
+    return request({
+      url: '/api/dispute/escalate',
+      method: 'post',
+      data
+    })
+  },
+
+  getSellerPendingDisputes(params) {
+    return request({
+      url: '/api/dispute/seller/pending',
+      method: 'get',
+      params
+    })
+  },
+
+  sellerRespondDispute(data) {
+    return request({
+      url: '/api/dispute/seller/respond',
+      method: 'post',
+      data
+    })
+  },
+
+  buyerConfirmProposal(data) {
+    return request({
+      url: '/api/dispute/buyer/confirm-proposal',
+      method: 'post',
+      data
+    })
+  },
+
+  checkDisputeTimeout() {
+    return request({
+      url: '/api/dispute/system/check-timeout',
+      method: 'post'
+    })
   }
 }

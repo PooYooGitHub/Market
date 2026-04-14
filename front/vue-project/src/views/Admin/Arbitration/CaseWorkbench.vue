@@ -75,6 +75,18 @@
           </div>
         </el-card>
 
+        <el-card class="module-card module-gap" shadow="never">
+          <template #header>
+            <div class="module-header">
+              <span class="module-title">协商记录摘要</span>
+              <span class="module-desc">来源争议ID：{{ caseDetail.sourceDisputeId || '-' }}</span>
+            </div>
+          </template>
+          <div class="negotiation-summary">
+            {{ caseDetail.negotiationSummary || '-' }}
+          </div>
+        </el-card>
+
         <EvidenceComparePanel
           class="module-gap"
           :applicant-evidence="caseDetail.applicantEvidence"
@@ -419,6 +431,8 @@ const normalizeCaseDetail = (detail) => {
     sellerClaim: detail.sellerClaim || '-',
     platformFocus: detail.platformFocus || '-',
     arbitrationRequest: detail.arbitrationRequest || '-',
+    sourceDisputeId: detail.sourceDisputeId || null,
+    negotiationSummary: detail.negotiationSummary || '-',
     applicantEvidence: normalizeEvidence(detail.applicantEvidence),
     respondentEvidence: normalizeEvidence(detail.respondentEvidence),
     systemEvidence: normalizeEvidence(detail.systemEvidence),
@@ -724,6 +738,16 @@ watch(
   font-size: 14px;
   line-height: 1.65;
   color: #1f2937;
+}
+
+.negotiation-summary {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: #1f2937;
+  background: #f9fbff;
+  border: 1px solid #e4ebf8;
+  border-radius: 10px;
+  padding: 12px;
 }
 
 .assist-tabs :deep(.el-tabs__header) {

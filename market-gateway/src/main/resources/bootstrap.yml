@@ -122,6 +122,14 @@ spring:
           filters:
             - StripPrefix=1
 
+        # 争议协商服务路由
+        - id: market-service-dispute
+          uri: lb://market-service-arbitration
+          predicates:
+            - Path=/api/dispute/**
+          filters:
+            - StripPrefix=1
+
         # Feign内部接口路由 - 交易服务（不去前缀，直接转发）
         - id: feign-trade
           uri: lb://market-service-trade

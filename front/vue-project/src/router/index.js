@@ -20,6 +20,11 @@ import ArbitrationApply from '@/views/Arbitration/ArbitrationApply.vue'
 import ArbitrationList from '@/views/Arbitration/ArbitrationList.vue'
 import ArbitrationDetail from '@/views/Arbitration/ArbitrationDetail.vue'
 import ArbitrationAdmin from '@/views/Arbitration/ArbitrationAdmin.vue'
+import DisputeApply from '@/views/Dispute/DisputeApply.vue'
+import DisputeMyList from '@/views/Dispute/DisputeMyList.vue'
+import DisputeDetail from '@/views/Dispute/DisputeDetail.vue'
+import SellerDisputePending from '@/views/Dispute/SellerDisputePending.vue'
+import SellerDisputeDetail from '@/views/Dispute/SellerDisputeDetail.vue'
 import SimpleTest from '@/views/SimpleTest.vue'
 import UserProfile from '@/views/UserProfile.vue'
 
@@ -266,6 +271,51 @@ const routes = [
         component: ArbitrationDetail,
         meta: {
           title: '浠茶璇︽儏',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'dispute/apply',
+        name: 'DisputeApply',
+        component: DisputeApply,
+        meta: {
+          title: '发起争议',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'dispute/my',
+        name: 'DisputeMyList',
+        component: DisputeMyList,
+        meta: {
+          title: '我的争议',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'dispute/detail/:id',
+        name: 'DisputeDetail',
+        component: DisputeDetail,
+        meta: {
+          title: '争议详情',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'dispute/seller/pending',
+        name: 'SellerDisputePending',
+        component: SellerDisputePending,
+        meta: {
+          title: '卖家待响应争议',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'dispute/seller/detail/:id',
+        name: 'SellerDisputeDetail',
+        component: SellerDisputeDetail,
+        meta: {
+          title: '卖家响应争议',
           requiresAuth: true
         }
       }
