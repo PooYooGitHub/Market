@@ -1,12 +1,6 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 
-/**
- * 仲裁相关 API
- */
 export const arbitrationApi = {
-  /**
-   * 创建仲裁申请
-   */
   createArbitration(data) {
     return request({
       url: '/api/arbitration/submit',
@@ -15,9 +9,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 修改仲裁申请
-   */
   updateArbitration(id, data) {
     return request({
       url: `/api/arbitration/update/${id}`,
@@ -26,9 +17,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 查询当前用户仲裁列表
-   */
   getUserArbitrationList(params) {
     return request({
       url: '/api/arbitration/my',
@@ -37,9 +25,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 查询仲裁详情
-   */
   getArbitrationDetail(id) {
     return request({
       url: `/api/arbitration/detail/${id}`,
@@ -47,9 +32,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 根据订单ID查询当前用户仲裁申请
-   */
   getMyArbitrationByOrderId(orderId) {
     return request({
       url: `/api/arbitration/my/order/${orderId}`,
@@ -57,9 +39,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 取消仲裁申请
-   */
   cancelArbitration(id) {
     return request({
       url: `/api/arbitration/cancel/${id}`,
@@ -67,9 +46,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 查询用户仲裁统计
-   */
   getUserArbitrationStats() {
     return request({
       url: '/api/arbitration/stats/user',
@@ -77,9 +53,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 查询仲裁日志
-   */
   getArbitrationLogs(arbitrationId) {
     return request({
       url: `/api/arbitration/logs/${arbitrationId}`,
@@ -87,9 +60,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 管理端仲裁列表
-   */
   getAdminArbitrationList(params) {
     return request({
       url: '/api/arbitration/admin/list',
@@ -98,9 +68,13 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 受理仲裁
-   */
+  getAdminArbitrationDetail(id) {
+    return request({
+      url: `/api/arbitration/admin/detail/${id}`,
+      method: 'get'
+    })
+  },
+
   acceptArbitration(id) {
     return request({
       url: `/api/arbitration/admin/accept/${id}`,
@@ -108,9 +82,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 处理仲裁
-   */
   handleArbitration(data) {
     return request({
       url: '/api/arbitration/admin/handle',
@@ -119,9 +90,6 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 驳回仲裁
-   */
   rejectArbitration(id, reason) {
     return request({
       url: `/api/arbitration/admin/reject/${id}`,
@@ -130,9 +98,29 @@ export const arbitrationApi = {
     })
   },
 
-  /**
-   * 管理端仲裁统计
-   */
+  requestSupplement(data) {
+    return request({
+      url: '/api/arbitration/admin/supplement/request',
+      method: 'post',
+      data
+    })
+  },
+
+  expireSupplement(requestId) {
+    return request({
+      url: `/api/arbitration/admin/supplement/expire/${requestId}`,
+      method: 'post'
+    })
+  },
+
+  submitSupplement(data) {
+    return request({
+      url: '/api/arbitration/supplement/submit',
+      method: 'post',
+      data
+    })
+  },
+
   getArbitrationStats() {
     return request({
       url: '/api/arbitration/admin/stats',

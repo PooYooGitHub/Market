@@ -331,6 +331,14 @@ const routes = [
         }
       },
       {
+        path: 'arbitration/detail/:id',
+        name: 'AdminArbitrationDetail',
+        component: () => import('@/views/Admin/Arbitration/CaseDetail.vue'),
+        meta: {
+          title: '仲裁详情'
+        }
+      },
+      {
         path: 'arbitration/completed',
         name: 'ArbitrationCompleted',
         component: () => import('@/views/Admin/Arbitration/CompletedCases.vue'),

@@ -50,7 +50,7 @@ export const useArbitrationStore = defineStore('arbitration', {
     // 用户端 getters
     hasActiveArbitration: (state) => {
       return state.userArbitrations.some(item => 
-        item.status === 0 || item.status === 1
+        item.status === 0 || item.status === 1 || item.status === 4
       )
     },
     userPendingCount: (state) => state.userStats.pendingCount,
@@ -200,7 +200,7 @@ export const useArbitrationStore = defineStore('arbitration', {
       const list = this.userArbitrations
       this.userStats.totalCount = list.length
       this.userStats.pendingCount = list.filter(item => item.status === 0).length
-      this.userStats.processingCount = list.filter(item => item.status === 1).length
+      this.userStats.processingCount = list.filter(item => item.status === 1 || item.status === 4).length
       this.userStats.completedCount = list.filter(item => item.status === 2).length
       this.userStats.rejectedCount = list.filter(item => item.status === 3).length
       
@@ -233,6 +233,7 @@ export const useArbitrationStore = defineStore('arbitration', {
       const statusNames = {
         0: '待处理',
         1: '处理中',
+        4: '待补证',
         2: '已完结',
         3: '已驳回'
       }
@@ -247,6 +248,10 @@ export const useArbitrationStore = defineStore('arbitration', {
         title = '仲裁已受理'
         message = `您的仲裁申请 ${caseNumber} 已被受理，正在处理中`
         type = 'success'
+      } else if (arbitration.status === 4) {
+        title = '仲裁待补证'
+        message = `您的仲裁申请 ${caseNumber} 正在等待补充证据，请尽快在时限内提交`
+        type = 'warning'
       } else if (arbitration.status === 2) {
         title = '仲裁已完结'
         message = `您的仲裁申请 ${caseNumber} 已处理完成，请查看裁决结果`

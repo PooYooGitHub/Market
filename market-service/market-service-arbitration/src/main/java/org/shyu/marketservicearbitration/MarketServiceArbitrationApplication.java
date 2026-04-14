@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableFeignClients(basePackages = {
     "org.shyu.marketapiuser.feign",
     "org.shyu.marketapitrade.feign",
+    "org.shyu.marketapiproduct.feign",
     "org.shyu.marketapicredit.feign"
 })
 @MapperScan("org.shyu.marketservicearbitration.mapper")

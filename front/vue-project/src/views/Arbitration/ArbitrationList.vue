@@ -211,10 +211,10 @@ const pagination = reactive({
 // 状态值转换辅助函数
 const getStatusValue = (tabKey) => {
   const statusMap = {
-    'pending': 0,    // 待处理
-    'processing': 1, // 处理中
-    'completed': 2,  // 已完结
-    'rejected': 3    // 已驳回
+    '0': 0,
+    '1': 1,
+    '2': 2,
+    '3': 3
   }
   return statusMap[tabKey]
 }

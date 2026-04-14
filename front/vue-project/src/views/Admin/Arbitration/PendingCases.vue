@@ -99,7 +99,7 @@
 
         <el-table-column prop="caseNumber" label="案件编号" width="150">
           <template #default="scope">
-            <el-link @click="openCaseDetail(scope.row)" type="primary">
+            <el-link @click="goCaseDetail(scope.row)" type="primary">
               {{ scope.row.caseNumber }}
             </el-link>
           </template>
@@ -137,13 +137,16 @@
 
         <el-table-column prop="createTime" label="申请时间" width="180" />
 
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="270" fixed="right">
           <template #default="scope">
             <el-button size="small" type="primary" @click="acceptCase(scope.row)">
               受理
             </el-button>
-            <el-button size="small" type="info" @click="openCaseDetail(scope.row)">
+            <el-button size="small" type="info" @click="goCaseDetail(scope.row)">
               详情
+            </el-button>
+            <el-button size="small" type="warning" @click="requestSupplement(scope.row)">
+              要求补证
             </el-button>
             <el-button size="small" type="danger" @click="rejectCase(scope.row)">
               驳回
@@ -177,6 +180,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { arbitrationApi } from '@/api/arbitration'
@@ -187,6 +191,7 @@ const batchLoading = ref(false)
 const searchKeyword = ref('')
 const caseList = ref([])
 const selectedCases = ref([])
+const router = useRouter()
 
 // 统计数据
 const statistics = reactive({
@@ -398,123 +403,51 @@ const handleCurrentChange = (val) => {
   loadPendingCases()
 }
 
-// 案件操作
-const viewDetail = (caseItem) => {
-  // 跳转到详情页面或显示详情弹窗
-  console.log('查看案件详情：', caseItem)
-  ElMessage.info(`查看案件详情：${caseItem.caseNumber}`)
-}
-
-const openCaseDetailLegacy = async (caseItem) => {
-  await ElMessageBox.alert(
-    `<div style="line-height:1.8;">
-      <div><strong>案件编号：</strong>${caseItem.caseNumber || '-'}</div>
-      <div><strong>争议标题：</strong>${caseItem.title || '-'}</div>
-      <div><strong>申请人：</strong>${caseItem.applicantName || '-'}</div>
-      <div><strong>被申请人：</strong>${caseItem.respondentName || '-'}</div>
-      <div><strong>争议类型：</strong>${getDisputeTypeName(caseItem.disputeType)}</div>
-      <div><strong>优先级：</strong>${getPriorityName(caseItem.priority)}</div>
-      <div><strong>等待天数：</strong>${caseItem.waitingDays || 0} 天</div>
-      <div><strong>申请时间：</strong>${caseItem.createTime || '-'}</div>
-      <div><strong>关联订单：</strong>${caseItem.orderId || '-'}</div>
-    </div>`,
-    '案件详情',
-    {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '关闭'
+const goCaseDetail = (caseItem) => {
+  router.push({
+    name: 'AdminArbitrationDetail',
+    params: { id: caseItem.id },
+    query: {
+      from: 'pending',
+      caseNumber: caseItem.caseNumber,
+      applicantName: caseItem.applicantName,
+      respondentName: caseItem.respondentName
     }
-  )
+  })
 }
 
-const openCaseDetail = async (caseItem) => {
+const requestSupplement = async (caseItem) => {
   try {
-    const [detailRes, logsRes] = await Promise.all([
-      arbitrationApi.getArbitrationDetail(caseItem.id),
-      arbitrationApi.getArbitrationLogs(caseItem.id).catch(() => ({ data: [] }))
-    ])
-    const detail = detailRes?.data || {}
-    const logs = Array.isArray(logsRes?.data) ? logsRes.data : []
-    const evidenceList = parseEvidence(detail.evidence)
-
-    const evidenceHtml = evidenceList.length
-      ? evidenceList.map((item, idx) => `<div>${idx + 1}. <a href="${escapeHtml(item)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item)}</a></div>`).join('')
-      : '<div>无</div>'
-
-    const logsHtml = logs.length
-      ? logs.map((log, idx) => `<div>${idx + 1}. ${escapeHtml(formatDateTime(log.createTime))} - ${escapeHtml(log.action || '操作')} ${log.remark ? `（${escapeHtml(log.remark)}）` : ''}</div>`).join('')
-      : '<div>暂无处理记录</div>'
-
-    await ElMessageBox.alert(
-      `<div style="line-height:1.85;max-height:65vh;overflow:auto;padding-right:6px;">
-        <div><strong>案件编号：</strong>${escapeHtml(caseItem.caseNumber || '-')}</div>
-        <div><strong>订单号：</strong>${escapeHtml(String(detail.orderId || caseItem.orderId || '-'))}</div>
-        <div><strong>申请人：</strong>${escapeHtml(caseItem.applicantName || '-')}（ID: ${escapeHtml(String(detail.applicantId || '-'))}）</div>
-        <div><strong>被申请人：</strong>${escapeHtml(caseItem.respondentName || '-')}（ID: ${escapeHtml(String(detail.respondentId || '-'))}）</div>
-        <div><strong>仲裁原因：</strong>${escapeHtml(getReasonName(detail.reason))}</div>
-        <div><strong>详细描述：</strong>${escapeHtml(detail.description || '无')}</div>
-        <div><strong>证据材料：</strong>${evidenceHtml}</div>
-        <div><strong>状态：</strong>${escapeHtml(getStatusName(detail.status))}</div>
-        <div><strong>当前优先级：</strong>${escapeHtml(getPriorityName(caseItem.priority))}</div>
-        <div><strong>等待天数：</strong>${escapeHtml(String(caseItem.waitingDays || 0))} 天</div>
-        <div><strong>申请时间：</strong>${escapeHtml(formatDateTime(detail.createTime))}</div>
-        <div><strong>最后更新时间：</strong>${escapeHtml(formatDateTime(detail.updateTime))}</div>
-        <div style="margin-top:8px;"><strong>处理记录：</strong>${logsHtml}</div>
-      </div>`,
-      '仲裁申请详情',
+    const { value: requiredItems } = await ElMessageBox.prompt(
+      '请输入需补充的证据要求（默认通知买卖双方，48小时内补充）',
+      `要求补证 ${caseItem.caseNumber}`,
       {
-        dangerouslyUseHTMLString: true,
-        confirmButtonText: '关闭'
+        confirmButtonText: '发送补证要求',
+        cancelButtonText: '取消',
+        inputType: 'textarea',
+        inputPlaceholder: '例如：请补充完整聊天记录截图、交易凭证和商品实拍图',
+        inputValidator: (value) => {
+          if (!value || !String(value).trim()) return '请填写补证要求'
+          return true
+        }
       }
     )
+
+    await arbitrationApi.requestSupplement({
+      arbitrationId: caseItem.id,
+      targetParty: 'BOTH',
+      requiredItems: String(requiredItems).trim(),
+      remark: '管理员要求补充材料',
+      dueHours: 48
+    })
+    ElMessage.success('补证请求已发起（对象：买卖双方，时限48小时）')
+    refreshData()
   } catch (error) {
-    console.error('加载案件详情失败:', error)
-    ElMessage.error(error?.message || '加载案件详情失败')
+    if (error !== 'cancel') {
+      console.error('发起补证失败:', error)
+      ElMessage.error(error?.message || '发起补证失败')
+    }
   }
-}
-
-const getReasonName = (reason) => {
-  const map = {
-    QUALITY_ISSUE: '商品质量问题',
-    SHIPPING_DELAY: '发货/物流问题',
-    DESCRIPTION_MISMATCH: '商品描述不符',
-    NO_RESPONSE: '对方失联/不处理',
-    SERVICE_ISSUE: '售后服务问题',
-    OTHER: '其他'
-  }
-  return map[reason] || reason || '未知'
-}
-
-const getStatusName = (status) => {
-  const map = {
-    0: '待处理',
-    1: '处理中',
-    2: '已完结',
-    3: '已驳回'
-  }
-  return map[Number(status)] || '未知'
-}
-
-const parseEvidence = (evidence) => {
-  if (!evidence) return []
-  if (Array.isArray(evidence)) return evidence.map(item => String(item)).filter(Boolean)
-  if (typeof evidence !== 'string') return [String(evidence)]
-  try {
-    const parsed = JSON.parse(evidence)
-    if (Array.isArray(parsed)) return parsed.map(item => String(item)).filter(Boolean)
-    if (typeof parsed === 'string') return parsed ? [parsed] : []
-    return []
-  } catch {
-    return evidence ? [evidence] : []
-  }
-}
-
-const escapeHtml = (value) => {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 const acceptCase = async (caseItem) => {
