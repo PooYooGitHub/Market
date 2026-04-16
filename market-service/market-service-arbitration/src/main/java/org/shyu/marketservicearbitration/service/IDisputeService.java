@@ -24,6 +24,8 @@ public interface IDisputeService extends IService<DisputeRequestEntity> {
 
     IPage<DisputeListItemVO> getSellerPendingDisputes(Long sellerId, Integer current, Integer size);
 
+    IPage<DisputeListItemVO> getSellerAllDisputes(Long sellerId, Integer current, Integer size, List<String> statuses);
+
     DisputeDetailVO getDisputeDetail(Long disputeId, Long currentUserId);
 
     Boolean sellerRespond(SellerDisputeResponseDTO dto, Long sellerId);

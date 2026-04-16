@@ -16,15 +16,10 @@ import org.shyu.marketservicearbitration.vo.DisputeDetailVO;
 import org.shyu.marketservicearbitration.vo.DisputeListItemVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Api(tags = "争议协商服务")
 @Slf4j
@@ -118,6 +113,22 @@ public class DisputeController {
             return Result.success(page);
         } catch (Exception e) {
             log.error("查询卖家待响应争议失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @ApiOperation("卖家全部争议列表")
+    @GetMapping("/seller/all")
+    @SaCheckLogin
+    public Result<?> getSellerAllDisputes(@RequestParam(defaultValue = "1") Integer current,
+                                          @RequestParam(defaultValue = "10") Integer size,
+                                          @RequestParam(required = false) List<String> status) {
+        Long sellerId = StpUtil.getLoginIdAsLong();
+        try {
+            IPage<DisputeListItemVO> page = disputeService.getSellerAllDisputes(sellerId, current, size, status);
+            return Result.success(page);
+        } catch (Exception e) {
+            log.error("查询卖家全部争议失败", e);
             return Result.error(e.getMessage());
         }
     }

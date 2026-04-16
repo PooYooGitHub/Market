@@ -140,12 +140,12 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
                 DisputeNegotiationActionEnum.BUYER_CREATE.getCode(), "买家发起争议：" + dispute.getFactDescription(), dispute.getExpectedAmount());
 
         if (hitHighRiskRule(dispute)) {
-            dispute.setStatus(DisputeStatusEnum.NEGOTIATION_FAILED.getCode());
-            dispute.setExpireTime(null);
-            updateById(dispute);
             recordLog(dispute.getId(), dispute.getCurrentRound(), 0L, DisputeActorRoleEnum.SYSTEM.getCode(),
-                    DisputeNegotiationActionEnum.SYSTEM_AUTO_EXECUTE.getCode(),
-                    "命中高金额规则，建议直接升级仲裁", dispute.getExpectedAmount());
+                    DisputeNegotiationActionEnum.SYSTEM_RISK_HINT.getCode(),
+                    "命中高金额规则，建议优先升级仲裁，但仍可等待卖家响应", dispute.getExpectedAmount());
+            recordLog(dispute.getId(), dispute.getCurrentRound(), 0L, DisputeActorRoleEnum.SYSTEM.getCode(),
+                    DisputeNegotiationActionEnum.SYSTEM_RECOMMEND_ARBITRATION.getCode(),
+                    "高金额争议可直接升级仲裁", dispute.getExpectedAmount());
         }
         return dispute.getId();
     }
@@ -193,11 +193,36 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
     }
 
     @Override
+    public IPage<DisputeListItemVO> getSellerAllDisputes(Long sellerId, Integer current, Integer size, List<String> statuses) {
+        checkAndMarkTimeout();
+        Page<DisputeRequestEntity> page = new Page<>(current, size);
+        QueryWrapper<DisputeRequestEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("seller_id", sellerId);
+
+        if (statuses != null && !statuses.isEmpty()) {
+            List<String> normalized = statuses.stream()
+                    .filter(StringUtils::hasText)
+                    .map(status -> status.trim().toUpperCase(Locale.ROOT))
+                    .collect(Collectors.toList());
+            if (!normalized.isEmpty()) {
+                wrapper.in("status", normalized);
+            }
+        }
+        wrapper.orderByDesc("create_time");
+        IPage<DisputeRequestEntity> entityPage = page(page, wrapper);
+        return toListItemPage(entityPage);
+    }
+
+    @Override
     public DisputeDetailVO getDisputeDetail(Long disputeId, Long currentUserId) {
         refreshSingleTimeout(disputeId);
         DisputeRequestEntity dispute = getById(disputeId);
         if (dispute == null) {
             throw new BusinessException("争议不存在");
+        }
+        if (!Objects.equals(currentUserId, dispute.getBuyerId())
+                && !Objects.equals(currentUserId, dispute.getSellerId())) {
+            throw new BusinessException("无权查看该争议详情");
         }
 
         List<DisputeEvidenceEntity> evidenceEntities = listDisputeEvidence(disputeId);
@@ -958,6 +983,15 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         }
         String status = dispute.getStatus();
         String decisionType = normalizeUpper(dispute.getFinalDecisionType());
+        if (DisputeStatusEnum.WAIT_SELLER_RESPONSE.getCode().equals(status) && hitHighRiskRule(dispute)) {
+            return "高金额争议，建议优先升级仲裁；你也可以继续等待卖家响应";
+        }
+        if (DisputeStatusEnum.SELLER_TIMEOUT.getCode().equals(status)) {
+            return "卖家超时未响应，你可以直接升级仲裁";
+        }
+        if (DisputeStatusEnum.WAIT_BUYER_CONFIRM.getCode().equals(status)) {
+            return "卖家已提交替代方案，请确认是否接受";
+        }
         if (DisputeStatusEnum.ARBITRATION_DECIDED.getCode().equals(status)
                 || DisputeStatusEnum.ARBITRATION_EXECUTING.getCode().equals(status)) {
             if ("SUPPORT_FULL_REFUND".equals(decisionType)) {

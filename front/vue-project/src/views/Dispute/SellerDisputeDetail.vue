@@ -3,7 +3,7 @@
     <el-card shadow="hover" v-if="detail">
       <template #header>
         <div class="header-row">
-          <h3>卖家协商响应 #{{ detail.id }}</h3>
+          <h3>卖家争议详情 #{{ detail.id }}</h3>
           <el-button @click="$router.go(-1)">返回</el-button>
         </div>
       </template>
@@ -15,18 +15,81 @@
         <el-descriptions-item label="诉求类型">{{ detail.requestType }}</el-descriptions-item>
         <el-descriptions-item label="期望金额">¥{{ formatAmount(detail.expectedAmount) }}</el-descriptions-item>
         <el-descriptions-item label="截止时间">{{ formatTime(detail.expireTime) }}</el-descriptions-item>
-        <el-descriptions-item label="事实说明" :span="2">{{ detail.factDescription }}</el-descriptions-item>
-        <el-descriptions-item label="诉求说明" :span="2">{{ detail.requestDescription }}</el-descriptions-item>
+        <el-descriptions-item label="买家事实主张" :span="2">{{ detail.factDescription || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="买家诉求" :span="2">{{ detail.requestDescription || '-' }}</el-descriptions-item>
       </el-descriptions>
 
-      <el-card class="result-card" shadow="never">
+      <el-alert
+        v-if="detail.nextActionHint"
+        type="info"
+        :closable="false"
+        class="sub-card"
+        :title="detail.nextActionHint"
+      />
+
+      <el-card class="sub-card" shadow="never">
         <template #header><span>平台裁决与执行进度</span></template>
         <el-descriptions border :column="1">
           <el-descriptions-item label="裁决类型">{{ decisionTypeLabel(detail.finalDecisionType) }}</el-descriptions-item>
           <el-descriptions-item label="执行状态">{{ detail.finalExecutionStatus || detail.executionStatusLabel || '-' }}</el-descriptions-item>
           <el-descriptions-item label="结果说明">{{ detail.finalResultDescription || detail.executionRemark || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="下一步提示">{{ detail.nextActionHint || '-' }}</el-descriptions-item>
         </el-descriptions>
+      </el-card>
+
+      <el-card class="sub-card" shadow="never">
+        <template #header><span>买家证据</span></template>
+        <el-empty v-if="buyerEvidence.length === 0" description="暂无买家证据" />
+        <el-table v-else :data="buyerEvidence" size="small">
+          <el-table-column prop="title" label="标题" min-width="120" />
+          <el-table-column prop="description" label="说明" min-width="180" show-overflow-tooltip />
+          <el-table-column label="附件" width="120">
+            <template #default="{ row }">
+              <el-link v-if="row.fileUrl" :href="row.fileUrl" target="_blank" type="primary">查看</el-link>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="时间" min-width="160" />
+        </el-table>
+      </el-card>
+
+      <el-card class="sub-card" shadow="never">
+        <template #header><span>卖家证据</span></template>
+        <el-empty v-if="sellerEvidence.length === 0" description="暂无卖家证据" />
+        <el-table v-else :data="sellerEvidence" size="small">
+          <el-table-column prop="title" label="标题" min-width="120" />
+          <el-table-column prop="description" label="说明" min-width="180" show-overflow-tooltip />
+          <el-table-column label="附件" width="120">
+            <template #default="{ row }">
+              <el-link v-if="row.fileUrl" :href="row.fileUrl" target="_blank" type="primary">查看</el-link>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="时间" min-width="160" />
+        </el-table>
+      </el-card>
+
+      <el-card class="sub-card" shadow="never" v-if="detail.sellerProposal">
+        <template #header><span>卖家当前方案</span></template>
+        <el-descriptions border :column="2">
+          <el-descriptions-item label="方案类型">{{ detail.sellerProposal.proposalType || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="方案金额">¥{{ formatAmount(detail.sellerProposal.proposalAmount) }}</el-descriptions-item>
+          <el-descriptions-item label="运费承担">{{ detail.sellerProposal.freightBearer || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="方案说明" :span="2">{{ detail.sellerProposal.proposalDescription || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <el-card class="sub-card" shadow="never">
+        <template #header><span>协商时间线</span></template>
+        <el-timeline>
+          <el-timeline-item
+            v-for="log in detail.negotiationLogs || []"
+            :key="log.id"
+            :timestamp="formatTime(log.createTime)"
+          >
+            <div><strong>{{ log.actionLabel || log.actionType }}</strong></div>
+            <div>{{ log.content || '-' }}</div>
+          </el-timeline-item>
+        </el-timeline>
       </el-card>
 
       <el-form
@@ -82,7 +145,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { arbitrationApi } from '@/api/arbitration'
@@ -109,15 +172,20 @@ const rules = {
     validator: (_, value, callback) => {
       if (form.responseType === 'PROPOSE' && !value) callback(new Error('请选择方案类型'))
       else callback()
-    }, trigger: 'change'
+    },
+    trigger: 'change'
   }],
   proposalDescription: [{
     validator: (_, value, callback) => {
       if (form.responseType === 'PROPOSE' && !value) callback(new Error('请填写方案说明'))
       else callback()
-    }, trigger: 'blur'
+    },
+    trigger: 'blur'
   }]
 }
+
+const buyerEvidence = computed(() => (detail.value?.evidenceList || []).filter((item) => item.uploaderRole === 'BUYER'))
+const sellerEvidence = computed(() => (detail.value?.evidenceList || []).filter((item) => item.uploaderRole === 'SELLER'))
 
 const decisionTypeLabel = (value) => {
   const map = {
@@ -194,7 +262,7 @@ onMounted(loadDetail)
   align-items: center;
 }
 
-.result-card {
+.sub-card {
   margin-top: 16px;
 }
 
@@ -202,4 +270,3 @@ onMounted(loadDetail)
   margin-top: 20px;
 }
 </style>
-

@@ -200,6 +200,14 @@ export const arbitrationApi = {
     })
   },
 
+  getSellerAllDisputes(params) {
+    return request({
+      url: '/api/dispute/seller/all',
+      method: 'get',
+      params
+    })
+  },
+
   sellerRespondDispute(data) {
     return request({
       url: '/api/dispute/seller/respond',
@@ -223,4 +231,3 @@ export const arbitrationApi = {
     })
   }
 }
-
