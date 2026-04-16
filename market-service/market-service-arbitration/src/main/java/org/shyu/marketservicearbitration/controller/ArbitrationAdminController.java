@@ -11,6 +11,8 @@ import org.shyu.marketcommon.result.Result;
 import org.shyu.marketservicearbitration.dto.ArbitrationCompleteDTO;
 import org.shyu.marketservicearbitration.dto.ArbitrationRejectDTO;
 import org.shyu.marketservicearbitration.dto.SupplementRequestDTO;
+import org.shyu.marketservicearbitration.entity.ArbitrationEntity;
+import org.shyu.marketservicearbitration.service.IArbitrationDecisionWorkflowService;
 import org.shyu.marketservicearbitration.service.IArbitrationService;
 import org.shyu.marketservicearbitration.vo.AdminArbitrationDetailVO;
 import org.shyu.marketservicearbitration.vo.AdminArbitrationListItemVO;
@@ -32,6 +34,9 @@ public class ArbitrationAdminController {
 
     @Autowired
     private IArbitrationService arbitrationService;
+
+    @Autowired
+    private IArbitrationDecisionWorkflowService arbitrationDecisionWorkflowService;
 
     @ApiOperation("获取仲裁统计数据")
     @GetMapping("/stats")
@@ -63,6 +68,12 @@ public class ArbitrationAdminController {
         try {
             IPage<AdminArbitrationListItemVO> page = arbitrationService.getAdminArbitrationList(
                     current, size, status, keyword, priority);
+            if (page != null && page.getRecords() != null) {
+                for (AdminArbitrationListItemVO item : page.getRecords()) {
+                    ArbitrationEntity entity = arbitrationService.getById(item.getId());
+                    arbitrationDecisionWorkflowService.enrichAdminListItem(item, entity);
+                }
+            }
             return Result.success(page);
         } catch (Exception e) {
             log.error("获取管理员仲裁列表失败", e);
@@ -75,6 +86,8 @@ public class ArbitrationAdminController {
     public Result<?> getAdminArbitrationDetail(@PathVariable("id") @NotNull Long id) {
         try {
             AdminArbitrationDetailVO detail = arbitrationService.getAdminArbitrationDetail(id);
+            ArbitrationEntity entity = arbitrationService.getById(id);
+            arbitrationDecisionWorkflowService.enrichAdminDetail(detail, entity);
             return Result.success(detail);
         } catch (Exception e) {
             log.error("获取仲裁聚合详情失败", e);
@@ -103,7 +116,7 @@ public class ArbitrationAdminController {
     public Result<?> completeArbitration(@Valid @RequestBody ArbitrationCompleteDTO dto) {
         Long handlerId = StpUtil.getLoginIdAsLong();
         try {
-            Boolean success = arbitrationService.completeAdminArbitration(dto, handlerId);
+            Boolean success = arbitrationDecisionWorkflowService.completeDecision(dto, handlerId);
             return success ? Result.success("处理成功", null) : Result.error("处理失败");
         } catch (Exception e) {
             log.error("处理仲裁申请失败", e);
@@ -117,7 +130,7 @@ public class ArbitrationAdminController {
     public Result<?> rejectArbitration(@Valid @RequestBody ArbitrationRejectDTO dto) {
         Long handlerId = StpUtil.getLoginIdAsLong();
         try {
-            Boolean result = arbitrationService.rejectAdminArbitration(dto, handlerId);
+            Boolean result = arbitrationDecisionWorkflowService.rejectDecision(dto, handlerId);
             return result ? Result.success("驳回成功", null) : Result.error("驳回失败");
         } catch (Exception e) {
             log.error("驳回仲裁申请失败", e);

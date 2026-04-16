@@ -21,6 +21,9 @@
         <result column="seller_response_amount" property="sellerResponseAmount"/>
         <result column="seller_response_freight_bearer" property="sellerResponseFreightBearer"/>
         <result column="escalated_arbitration_id" property="escalatedArbitrationId"/>
+        <result column="final_decision_type" property="finalDecisionType"/>
+        <result column="final_execution_status" property="finalExecutionStatus"/>
+        <result column="final_result_description" property="finalResultDescription"/>
         <result column="expire_time" property="expireTime"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>

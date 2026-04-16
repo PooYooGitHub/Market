@@ -139,7 +139,12 @@ const canShowDisputeAction = computed(() => {
 
 const disputeActionText = computed(() => {
   if (!currentDispute.value) return '发起争议协商'
-  if (currentDispute.value.status === 'ESCALATED_TO_ARBITRATION') return '查看争议与仲裁'
+  if (
+    ['ESCALATED_TO_ARBITRATION', 'ARBITRATION_DECIDED', 'ARBITRATION_EXECUTING', 'ARBITRATION_EXECUTED']
+      .includes(currentDispute.value.status)
+  ) {
+    return '查看争议与仲裁进度'
+  }
   return '查看争议协商'
 })
 

@@ -13,13 +13,30 @@
         <el-descriptions-item label="状态">{{ detail.statusLabel }}</el-descriptions-item>
         <el-descriptions-item label="争议原因">{{ detail.reason }}</el-descriptions-item>
         <el-descriptions-item label="诉求类型">{{ detail.requestType }}</el-descriptions-item>
-        <el-descriptions-item label="期望金额">{{ detail.expectedAmount }}</el-descriptions-item>
+        <el-descriptions-item label="期望金额">¥{{ formatAmount(detail.expectedAmount) }}</el-descriptions-item>
         <el-descriptions-item label="截止时间">{{ formatTime(detail.expireTime) }}</el-descriptions-item>
         <el-descriptions-item label="事实说明" :span="2">{{ detail.factDescription }}</el-descriptions-item>
         <el-descriptions-item label="诉求说明" :span="2">{{ detail.requestDescription }}</el-descriptions-item>
       </el-descriptions>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px" class="response-form">
+      <el-card class="result-card" shadow="never">
+        <template #header><span>平台裁决与执行进度</span></template>
+        <el-descriptions border :column="1">
+          <el-descriptions-item label="裁决类型">{{ decisionTypeLabel(detail.finalDecisionType) }}</el-descriptions-item>
+          <el-descriptions-item label="执行状态">{{ detail.finalExecutionStatus || detail.executionStatusLabel || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="结果说明">{{ detail.finalResultDescription || detail.executionRemark || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="下一步提示">{{ detail.nextActionHint || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <el-form
+        v-if="detail.canSellerRespond"
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-width="120px"
+        class="response-form"
+      >
         <el-form-item label="响应类型" prop="responseType">
           <el-radio-group v-model="form.responseType">
             <el-radio value="AGREE">同意买家诉求</el-radio>
@@ -102,11 +119,30 @@ const rules = {
   }]
 }
 
+const decisionTypeLabel = (value) => {
+  const map = {
+    SUPPORT_FULL_REFUND: '支持全额退款',
+    SUPPORT_PARTIAL_REFUND: '支持部分退款',
+    SUPPORT_RETURN_AND_REFUND: '支持退货退款',
+    SUPPORT_REPLACE: '支持换货/补发',
+    REJECT_BUYER_REQUEST: '驳回买家诉求',
+    REQUIRE_SUPPLEMENT: '要求补充材料',
+    CLOSE_WITH_NEGOTIATION_RESULT: '按协商结果结案',
+    OTHER: '其他'
+  }
+  return map[value] || '-'
+}
+
 const formatTime = (time) => {
   if (!time) return '-'
   const date = new Date(time)
   if (Number.isNaN(date.getTime())) return String(time)
   return date.toLocaleString('zh-CN')
+}
+
+const formatAmount = (amount) => {
+  const value = Number(amount || 0)
+  return Number.isNaN(value) ? '0.00' : value.toFixed(2)
 }
 
 const loadDetail = async () => {
@@ -156,6 +192,10 @@ onMounted(loadDetail)
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.result-card {
+  margin-top: 16px;
 }
 
 .response-form {

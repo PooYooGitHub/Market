@@ -12,16 +12,18 @@
         <el-table-column prop="id" label="争议ID" width="100" />
         <el-table-column prop="orderId" label="订单ID" width="120" />
         <el-table-column prop="reason" label="原因" width="160" />
-        <el-table-column prop="requestType" label="诉求类型" width="140" />
-        <el-table-column prop="expectedAmount" label="期望金额" width="120" />
-        <el-table-column label="状态" width="170">
+        <el-table-column prop="requestType" label="诉求类型" width="150" />
+        <el-table-column prop="expectedAmount" label="期望金额" width="130">
+          <template #default="{ row }">¥{{ formatAmount(row.expectedAmount) }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="180">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)">{{ row.statusLabel || row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="倒计时" width="170">
+        <el-table-column label="执行进度" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ formatCountdown(row.expireTime) }}
+            {{ row.finalResultDescription || row.finalExecutionStatus || '-' }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
@@ -61,16 +63,14 @@ const statusType = (status) => {
   if (status === 'NEGOTIATION_SUCCESS') return 'success'
   if (status === 'NEGOTIATION_FAILED' || status === 'SELLER_TIMEOUT') return 'warning'
   if (status === 'ESCALATED_TO_ARBITRATION') return 'danger'
+  if (status === 'ARBITRATION_DECIDED' || status === 'ARBITRATION_EXECUTING') return 'warning'
+  if (status === 'ARBITRATION_EXECUTED' || status === 'CLOSED') return 'success'
   return 'info'
 }
 
-const formatCountdown = (expireTime) => {
-  if (!expireTime) return '-'
-  const diff = new Date(expireTime).getTime() - Date.now()
-  if (Number.isNaN(diff) || diff <= 0) return '已超时'
-  const h = Math.floor(diff / (1000 * 60 * 60))
-  const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  return `${h}小时${m}分`
+const formatAmount = (amount) => {
+  const value = Number(amount || 0)
+  return Number.isNaN(value) ? '0.00' : value.toFixed(2)
 }
 
 const loadList = async () => {
@@ -92,7 +92,7 @@ const goDetail = (id) => {
 
 const escalate = async (row) => {
   try {
-    await ElMessageBox.confirm(`确认将争议 #${row.id} 升级到管理员仲裁吗？`, '升级仲裁', {
+    await ElMessageBox.confirm(`确认将争议 #${row.id} 升级仲裁吗？`, '升级仲裁', {
       confirmButtonText: '确认升级',
       cancelButtonText: '取消',
       type: 'warning'

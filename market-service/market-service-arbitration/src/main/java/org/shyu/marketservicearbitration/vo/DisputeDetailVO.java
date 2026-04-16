@@ -50,6 +50,14 @@ public class DisputeDetailVO {
 
     private String executionRemark;
 
+    private String finalDecisionType;
+
+    private String finalExecutionStatus;
+
+    private String finalResultDescription;
+
+    private String nextActionHint;
+
     private SellerProposalVO sellerProposal;
 
     private List<DisputeEvidenceVO> evidenceList = new ArrayList<>();

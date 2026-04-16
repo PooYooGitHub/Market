@@ -23,6 +23,7 @@ import org.shyu.marketservicearbitration.entity.ArbitrationLogEntity;
 import org.shyu.marketservicearbitration.entity.DisputeEvidenceEntity;
 import org.shyu.marketservicearbitration.entity.DisputeNegotiationLogEntity;
 import org.shyu.marketservicearbitration.entity.DisputeRequestEntity;
+import org.shyu.marketservicearbitration.enums.ArbitrationExecutionStatusEnum;
 import org.shyu.marketservicearbitration.enums.DisputeActorRoleEnum;
 import org.shyu.marketservicearbitration.enums.DisputeNegotiationActionEnum;
 import org.shyu.marketservicearbitration.enums.DisputeStatusEnum;
@@ -124,6 +125,9 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         dispute.setRequestType(dto.getRequestType().trim().toUpperCase(Locale.ROOT));
         dispute.setRequestDescription(dto.getRequestDescription().trim());
         dispute.setExpectedAmount(dto.getExpectedAmount() == null ? BigDecimal.ZERO : dto.getExpectedAmount());
+        dispute.setFinalDecisionType(null);
+        dispute.setFinalExecutionStatus(null);
+        dispute.setFinalResultDescription(null);
         dispute.setStatus(DisputeStatusEnum.WAIT_SELLER_RESPONSE.getCode());
         dispute.setCurrentRound(1);
         dispute.setExpireTime(LocalDateTime.now().plusHours(SELLER_RESPONSE_TIMEOUT_HOURS));
@@ -214,10 +218,21 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         vo.setCanSellerRespond(DisputeStatusEnum.canSellerRespond(dispute.getStatus()));
         vo.setCanBuyerConfirm(DisputeStatusEnum.WAIT_BUYER_CONFIRM.getCode().equals(dispute.getStatus()));
         vo.setCanEscalate(DisputeStatusEnum.canEscalate(dispute.getStatus()));
+
         NegotiationExecution execution = resolveNegotiationExecution(dispute);
-        vo.setExecutionStatus(execution.getCode());
-        vo.setExecutionStatusLabel(execution.getLabel());
-        vo.setExecutionRemark(execution.getRemark());
+        if (StringUtils.hasText(dispute.getFinalExecutionStatus())) {
+            vo.setExecutionStatus(dispute.getFinalExecutionStatus());
+            vo.setExecutionStatusLabel(ArbitrationExecutionStatusEnum.labelOf(dispute.getFinalExecutionStatus()));
+            vo.setExecutionRemark(firstText(dispute.getFinalResultDescription(), execution.getRemark()));
+        } else {
+            vo.setExecutionStatus(execution.getCode());
+            vo.setExecutionStatusLabel(execution.getLabel());
+            vo.setExecutionRemark(execution.getRemark());
+        }
+        vo.setFinalDecisionType(dispute.getFinalDecisionType());
+        vo.setFinalExecutionStatus(dispute.getFinalExecutionStatus());
+        vo.setFinalResultDescription(dispute.getFinalResultDescription());
+        vo.setNextActionHint(buildNextActionHint(dispute));
         return vo;
     }
 
@@ -530,7 +545,7 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
                 .notIn("status", Arrays.asList(
                         DisputeStatusEnum.NEGOTIATION_SUCCESS.getCode(),
                         DisputeStatusEnum.CLOSED.getCode(),
-                        DisputeStatusEnum.ESCALATED_TO_ARBITRATION.getCode()));
+                        DisputeStatusEnum.ARBITRATION_EXECUTED.getCode()));
         if (count(wrapper) > 0) {
             throw new BusinessException("该订单已有进行中的争议，请先处理当前争议");
         }
@@ -696,6 +711,9 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
 
         dispute.setEscalatedArbitrationId(arbitration.getId());
         dispute.setStatus(DisputeStatusEnum.ESCALATED_TO_ARBITRATION.getCode());
+        dispute.setFinalDecisionType(null);
+        dispute.setFinalExecutionStatus(null);
+        dispute.setFinalResultDescription("争议已升级仲裁，等待平台裁决");
         dispute.setExpireTime(null);
         updateById(dispute);
 
@@ -932,6 +950,40 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
                 "协商成功（待后续执行）",
                 "协商已达成，等待后续执行链路"
         );
+    }
+
+    private String buildNextActionHint(DisputeRequestEntity dispute) {
+        if (dispute == null) {
+            return "";
+        }
+        String status = dispute.getStatus();
+        String decisionType = normalizeUpper(dispute.getFinalDecisionType());
+        if (DisputeStatusEnum.ARBITRATION_DECIDED.getCode().equals(status)
+                || DisputeStatusEnum.ARBITRATION_EXECUTING.getCode().equals(status)) {
+            if ("SUPPORT_FULL_REFUND".equals(decisionType)) {
+                return "平台已裁决支持全额退款，等待系统执行";
+            }
+            if ("SUPPORT_PARTIAL_REFUND".equals(decisionType)) {
+                return "平台已裁决支持部分退款，等待系统执行";
+            }
+            if ("SUPPORT_RETURN_AND_REFUND".equals(decisionType)) {
+                return "平台已裁决支持退货退款，请买家先寄回商品";
+            }
+            if ("SUPPORT_REPLACE".equals(decisionType)) {
+                return "平台已裁决支持换货/补发，请双方按指引履约";
+            }
+            if ("REJECT_BUYER_REQUEST".equals(decisionType)) {
+                return "平台已驳回本次争议申请";
+            }
+            return firstText(dispute.getFinalResultDescription(), "平台已裁决，等待后续执行");
+        }
+        if (DisputeStatusEnum.ARBITRATION_EXECUTED.getCode().equals(status)) {
+            return firstText(dispute.getFinalResultDescription(), "仲裁执行已完成");
+        }
+        if (DisputeStatusEnum.CLOSED.getCode().equals(status) && "REJECT_BUYER_REQUEST".equals(decisionType)) {
+            return "平台已驳回本次争议申请";
+        }
+        return firstText(dispute.getFinalResultDescription(), "");
     }
 
     private String toJson(List<String> urls) {

@@ -94,6 +94,27 @@ public class ArbitrationEntity implements Serializable {
     @TableField("decision_remark")
     private String decisionRemark;
 
+    @TableField("decision_type")
+    private String decisionType;
+
+    @TableField("execution_type")
+    private String executionType;
+
+    @TableField("execution_status")
+    private String executionStatus;
+
+    @TableField("execution_remark")
+    private String executionRemark;
+
+    @TableField("execution_payload")
+    private String executionPayload;
+
+    @TableField("decide_time")
+    private LocalDateTime decideTime;
+
+    @TableField("execute_time")
+    private LocalDateTime executeTime;
+
     @TableField("reject_reason")
     private String rejectReason;
 

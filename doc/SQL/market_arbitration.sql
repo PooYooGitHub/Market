@@ -11,7 +11,7 @@
  Target Server Version : 80408 (8.4.8)
  File Encoding         : 65001
 
- Date: 14/04/2026 15:33:32
+ Date: 16/04/2026 17:14:41
 */
 
 SET NAMES utf8mb4;
@@ -41,6 +41,13 @@ CREATE TABLE `t_arbitration`  (
   `buyer_claim` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '买家事实主张',
   `decision_remark` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '裁决备注',
   `reject_reason` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '驳回原因',
+  `decision_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '裁决类型',
+  `execution_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行类型',
+  `execution_status` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行状态',
+  `execution_remark` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行备注',
+  `execution_payload` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '执行载荷(JSON)',
+  `decide_time` datetime NULL DEFAULT NULL COMMENT '裁决时间',
+  `execute_time` datetime NULL DEFAULT NULL COMMENT '执行完成时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_order_id`(`order_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁申请表' ROW_FORMAT = Dynamic;
@@ -65,7 +72,30 @@ CREATE TABLE `t_arbitration_evidence_submission`  (
   INDEX `idx_submission_arbitration`(`arbitration_id` ASC) USING BTREE,
   INDEX `idx_submission_request`(`supplement_request_id` ASC) USING BTREE,
   INDEX `idx_submission_role`(`submitter_role` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁证据提交表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁证据提交表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for t_arbitration_execution_task
+-- ----------------------------
+DROP TABLE IF EXISTS `t_arbitration_execution_task`;
+CREATE TABLE `t_arbitration_execution_task`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `arbitration_id` bigint NOT NULL,
+  `dispute_id` bigint NULL DEFAULT NULL,
+  `order_id` bigint NULL DEFAULT NULL,
+  `execution_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `execution_status` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `payload` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `result_message` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `retry_count` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `finish_time` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_execution_task_arb`(`arbitration_id` ASC) USING BTREE,
+  INDEX `idx_execution_task_dispute`(`dispute_id` ASC) USING BTREE,
+  INDEX `idx_execution_task_status`(`execution_status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for t_arbitration_log
@@ -80,7 +110,7 @@ CREATE TABLE `t_arbitration_log`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_arbitration_id`(`arbitration_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁记录表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for t_arbitration_supplement_request
@@ -100,7 +130,7 @@ CREATE TABLE `t_arbitration_supplement_request`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_supplement_arbitration`(`arbitration_id` ASC) USING BTREE,
   INDEX `idx_supplement_status_due`(`status` ASC, `due_time` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁补证请求表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '仲裁补证请求表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for t_dispute_evidence
@@ -121,7 +151,7 @@ CREATE TABLE `t_dispute_evidence`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_dispute_evidence_biz`(`biz_type` ASC, `biz_id` ASC) USING BTREE,
   INDEX `idx_dispute_evidence_uploader`(`uploader_id` ASC, `uploader_role` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for t_dispute_negotiation_log
@@ -141,7 +171,7 @@ CREATE TABLE `t_dispute_negotiation_log`  (
   INDEX `idx_dispute_log_dispute`(`dispute_id` ASC) USING BTREE,
   INDEX `idx_dispute_log_action`(`action_type` ASC) USING BTREE,
   INDEX `idx_dispute_log_create`(`create_time` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for t_dispute_request
@@ -175,6 +205,6 @@ CREATE TABLE `t_dispute_request`  (
   INDEX `idx_dispute_seller`(`seller_id` ASC) USING BTREE,
   INDEX `idx_dispute_status`(`status` ASC) USING BTREE,
   INDEX `idx_dispute_expire`(`expire_time` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

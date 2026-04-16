@@ -1,9 +1,9 @@
-﻿<template>
+<template>
   <div class="case-workbench" v-loading="loading">
     <div class="workbench-topbar">
       <div>
         <h2 class="page-title">管理员仲裁详情工作台</h2>
-        <p class="page-subtitle">聚焦争议核心、证据对照与处理动作，快速完成判案决策</p>
+        <p class="page-subtitle">聚焦争议焦点、裁决结果与执行进度，完成闭环处理</p>
       </div>
       <div class="toolbar-actions">
         <el-button @click="goBack">
@@ -57,20 +57,20 @@
 
           <div class="focus-grid">
             <div class="focus-item buyer">
-              <div class="focus-label">买家主张</div>
-              <div class="focus-content">{{ caseDetail.buyerClaim }}</div>
+              <div class="focus-label">买家事实主张</div>
+              <div class="focus-content">{{ caseDetail.buyerClaim || '-' }}</div>
             </div>
             <div class="focus-item seller">
               <div class="focus-label">卖家主张</div>
-              <div class="focus-content">{{ caseDetail.sellerClaim }}</div>
+              <div class="focus-content">{{ caseDetail.sellerClaim || '-' }}</div>
             </div>
             <div class="focus-item platform">
               <div class="focus-label">平台关注点</div>
-              <div class="focus-content">{{ caseDetail.platformFocus }}</div>
+              <div class="focus-content">{{ caseDetail.platformFocus || '-' }}</div>
             </div>
             <div class="focus-item request">
-              <div class="focus-label">仲裁请求</div>
-              <div class="focus-content">{{ caseDetail.arbitrationRequest }}</div>
+              <div class="focus-label">仲裁请求（诉求）</div>
+              <div class="focus-content">{{ caseDetail.arbitrationRequest || '未填写明确诉求' }}</div>
             </div>
           </div>
         </el-card>
@@ -122,7 +122,7 @@
               <div class="snapshot-product">
                 <el-image
                   :src="caseDetail.productImage"
-                  :preview-src-list="[caseDetail.productImage]"
+                  :preview-src-list="caseDetail.productImage ? [caseDetail.productImage] : []"
                   fit="cover"
                   class="product-image"
                   preview-teleported
@@ -130,7 +130,7 @@
                 <div class="snapshot-info-grid">
                   <div class="snapshot-item">
                     <span class="k">商品名称</span>
-                    <span class="v">{{ caseDetail.productName }}</span>
+                    <span class="v">{{ caseDetail.productName || '-' }}</span>
                   </div>
                   <div class="snapshot-item">
                     <span class="k">商品标价</span>
@@ -142,7 +142,7 @@
                   </div>
                   <div class="snapshot-item full">
                     <span class="k">商品描述</span>
-                    <span class="v">{{ caseDetail.productSnapshot.description }}</span>
+                    <span class="v">{{ caseDetail.productSnapshot.description || '-' }}</span>
                   </div>
                 </div>
               </div>
@@ -152,15 +152,15 @@
               <div class="snapshot-info-grid order-grid">
                 <div class="snapshot-item">
                   <span class="k">订单号</span>
-                  <span class="v">{{ caseDetail.orderSnapshot.orderNo }}</span>
+                  <span class="v">{{ caseDetail.orderSnapshot.orderNo || '-' }}</span>
                 </div>
                 <div class="snapshot-item">
                   <span class="k">订单状态</span>
-                  <span class="v">{{ caseDetail.orderSnapshot.status }}</span>
+                  <span class="v">{{ caseDetail.orderSnapshot.status || '-' }}</span>
                 </div>
                 <div class="snapshot-item">
                   <span class="k">下单时间</span>
-                  <span class="v">{{ caseDetail.orderSnapshot.createTime }}</span>
+                  <span class="v">{{ caseDetail.orderSnapshot.createTime || '-' }}</span>
                 </div>
                 <div class="snapshot-item">
                   <span class="k">成交金额</span>
@@ -193,7 +193,7 @@
                   <el-image
                     v-if="item.type === 'image'"
                     :src="item.thumbnail || item.url"
-                    :preview-src-list="[item.url || item.thumbnail]"
+                    :preview-src-list="item.url || item.thumbnail ? [item.url || item.thumbnail] : []"
                     fit="cover"
                     class="system-thumb"
                     preview-teleported
@@ -211,7 +211,7 @@
           <template #header>
             <div class="module-header">
               <span class="module-title">处理记录时间线</span>
-              <span class="module-desc">案件流转过程</span>
+              <span class="module-desc">裁决阶段 + 执行阶段</span>
             </div>
           </template>
 
@@ -254,21 +254,56 @@
             </div>
 
             <div class="panel-section">
+              <div class="panel-label">裁决类型</div>
+              <el-select
+                v-model="decisionType"
+                :disabled="isReadonly"
+                placeholder="请选择裁决类型"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in decisionTypeOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </div>
+
+            <div class="panel-section">
               <div class="panel-label">处理备注</div>
               <el-input
                 v-model="decisionRemark"
                 type="textarea"
-                :rows="5"
+                :rows="4"
                 resize="none"
                 :disabled="isReadonly"
-                placeholder="请输入处理意见、证据判断理由"
+                placeholder="请输入裁决依据与处理说明"
               />
+            </div>
+
+            <div class="panel-section execution-box">
+              <div class="panel-label">执行信息</div>
+              <div class="execution-line">
+                <span>执行动作</span>
+                <strong>{{ caseDetail.executionTypeLabel || '-' }}</strong>
+              </div>
+              <div class="execution-line">
+                <span>执行状态</span>
+                <strong>{{ caseDetail.executionStatusLabel || '-' }}</strong>
+              </div>
+              <div class="execution-line">
+                <span>执行备注</span>
+                <strong>{{ caseDetail.executionRemark || '-' }}</strong>
+              </div>
             </div>
 
             <div v-if="isReadonly" class="result-panel">
               <div class="result-title">处理结果</div>
-              <div class="result-status">{{ caseDetail.status === 'completed' ? '已完结' : '已驳回' }}</div>
-              <div class="result-remark">{{ caseDetail.decisionRemark || caseDetail.rejectReason || '-' }}</div>
+              <div class="result-status">{{ statusInfo.label }}</div>
+              <div class="result-remark">
+                {{ caseDetail.decisionRemark || caseDetail.rejectReason || '-' }}
+              </div>
             </div>
 
             <div v-else class="action-buttons">
@@ -286,7 +321,7 @@
                 class="full-btn"
                 @click="handleComplete"
               >
-                完结
+                提交裁决
               </el-button>
               <el-button
                 v-if="canReject"
@@ -323,11 +358,24 @@ const loadError = ref('')
 const caseDetail = ref(null)
 const activeAssistTab = ref('chat')
 const decisionRemark = ref('')
+const decisionType = ref('SUPPORT_FULL_REFUND')
+
+const decisionTypeOptions = [
+  { value: 'SUPPORT_FULL_REFUND', label: '支持全额退款' },
+  { value: 'SUPPORT_PARTIAL_REFUND', label: '支持部分退款' },
+  { value: 'SUPPORT_RETURN_AND_REFUND', label: '支持退货退款' },
+  { value: 'SUPPORT_REPLACE', label: '支持换货/补发' },
+  { value: 'REJECT_BUYER_REQUEST', label: '驳回买家诉求' },
+  { value: 'REQUIRE_SUPPLEMENT', label: '要求补充材料' },
+  { value: 'CLOSE_WITH_NEGOTIATION_RESULT', label: '按协商结果结案' },
+  { value: 'OTHER', label: '其他' }
+]
 
 const statusMap = {
   pending: { label: '待处理', type: 'warning' },
   processing: { label: '处理中', type: 'primary' },
-  completed: { label: '已完结', type: 'success' },
+  decided: { label: '已裁决', type: 'warning' },
+  completed: { label: '已执行完成', type: 'success' },
   rejected: { label: '已驳回', type: 'danger' }
 }
 
@@ -351,11 +399,11 @@ const quickActions = computed(() => {
   }
   if (canComplete.value) {
     return [
-      { key: 'complete', label: '完结案件', type: 'success', plain: false },
+      { key: 'complete', label: '提交裁决', type: 'success', plain: false },
       { key: 'reject', label: '驳回申请', type: 'danger', plain: true }
     ]
   }
-  return [{ key: 'readonly', label: '查看处理结果', type: 'info', plain: true }]
+  return [{ key: 'readonly', label: '查看结果', type: 'info', plain: true }]
 })
 
 const riskTips = computed(() => {
@@ -366,18 +414,19 @@ const riskTips = computed(() => {
   )
 
   if (canAccept.value) tips.push('案件尚未受理，存在处理时效风险')
-  if (canComplete.value) tips.push('处理中案件，建议在本轮给出明确结论')
+  if (canComplete.value) tips.push('处理中案件，建议本轮给出明确裁决类型')
   if (diffCount >= 2) tips.push('双方证据量差异较大，建议重点核验系统记录')
-  if (Number(caseDetail.value.orderAmount || 0) >= 500) tips.push('争议金额较高，处理备注建议保留完整裁定依据')
-  if (!tips.length) tips.push('当前案件风险可控，按流程归档即可')
+  if (Number(caseDetail.value.orderAmount || 0) >= 500) tips.push('争议金额较高，建议补充完整裁决依据')
+  if (!tips.length) tips.push('当前案件已进入执行阶段，请重点关注执行状态')
   return tips.slice(0, 3)
 })
 
 const recommendedAction = computed(() => {
   if (!caseDetail.value) return '-'
   if (canAccept.value) return '建议先受理，再核对聊天摘要与系统证据是否一致。'
-  if (canComplete.value) return '建议结合双方证据对照和平台关注点，输出可追溯的处理结论。'
-  return '案件已结束，可复核处理结果并保留备注作为后续申诉依据。'
+  if (canComplete.value) return '请先选择裁决类型，再提交裁决并观察执行任务状态。'
+  if (caseDetail.value.status === 'decided') return '案件已裁决，正在执行中或待人工处理。'
+  return '案件已结束，可复核处理结果并保留备注用于后续追溯。'
 })
 
 const loadCaseDetail = async () => {
@@ -399,6 +448,7 @@ const loadCaseDetail = async () => {
 
     caseDetail.value = normalizeCaseDetail(detail)
     decisionRemark.value = caseDetail.value.decisionRemark || caseDetail.value.rejectReason || ''
+    decisionType.value = caseDetail.value.decisionType || 'SUPPORT_FULL_REFUND'
     activeAssistTab.value = 'chat'
   } catch (error) {
     caseDetail.value = null
@@ -447,7 +497,14 @@ const normalizeCaseDetail = (detail) => {
     canComplete: Boolean(detail.canComplete),
     canReject: Boolean(detail.canReject),
     readonly: Boolean(detail.readonly),
+    decisionType: detail.decisionType || '',
+    decisionTypeLabel: detail.decisionTypeLabel || '',
     decisionRemark: detail.decisionRemark || '',
+    executionType: detail.executionType || '',
+    executionTypeLabel: detail.executionTypeLabel || '',
+    executionStatus: detail.executionStatus || '',
+    executionStatusLabel: detail.executionStatusLabel || '',
+    executionRemark: detail.executionRemark || '',
     rejectReason: detail.rejectReason || ''
   }
 }
@@ -499,6 +556,7 @@ const statusCodeToKey = (status) => {
   if (status === 1) return 'processing'
   if (status === 2) return 'completed'
   if (status === 3) return 'rejected'
+  if (status === 5) return 'decided'
   return 'pending'
 }
 
@@ -506,7 +564,7 @@ const handleQuickAction = (actionKey) => {
   if (actionKey === 'accept') return handleAccept()
   if (actionKey === 'complete') return handleComplete()
   if (actionKey === 'reject') return handleReject()
-  ElMessage.info('案件已结束，请在右侧查看处理结论')
+  ElMessage.info('案件已进入只读状态')
 }
 
 const handleAccept = async () => {
@@ -566,22 +624,27 @@ const handleComplete = async () => {
     ElMessage.warning('请先填写处理备注')
     return
   }
+  if (!decisionType.value) {
+    ElMessage.warning('请先选择裁决类型')
+    return
+  }
   try {
-    await ElMessageBox.confirm('确认完结该案件？', '完结确认', {
-      confirmButtonText: '确认完结',
+    await ElMessageBox.confirm('确认提交裁决？提交后将进入执行阶段。', '裁决确认', {
+      confirmButtonText: '确认提交',
       cancelButtonText: '取消',
       type: 'warning'
     })
     submitting.value = true
     await arbitrationApi.completeAdminArbitration({
       arbitrationId: caseDetail.value.id,
+      decisionType: decisionType.value,
       decisionRemark: remark
     })
-    ElMessage.success('案件已完结')
+    ElMessage.success('裁决已提交，执行任务已创建')
     await loadCaseDetail()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error(error?.message || '完结失败')
+      ElMessage.error(error?.message || '提交裁决失败')
     }
   } finally {
     submitting.value = false
@@ -638,9 +701,6 @@ watch(
   --line-color: #e5eaf3;
   --text-main: #111827;
   --text-sub: #6b7280;
-  --brand: #1d4ed8;
-  --danger: #dc2626;
-  --success: #059669;
 
   padding: 18px;
   background: #f3f6fb;
@@ -975,6 +1035,26 @@ watch(
   color: #1f2937;
 }
 
+.execution-box {
+  padding: 10px;
+  border: 1px solid #dce4f2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.execution-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.execution-line + .execution-line {
+  margin-top: 6px;
+}
+
 .result-panel {
   margin-top: 12px;
   padding: 10px;
@@ -1056,3 +1136,4 @@ watch(
   }
 }
 </style>
+

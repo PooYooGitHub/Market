@@ -16,7 +16,7 @@
         <el-descriptions-item label="商品ID">{{ detail.productId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="争议原因">{{ detail.reason }}</el-descriptions-item>
         <el-descriptions-item label="诉求类型">{{ detail.requestType }}</el-descriptions-item>
-        <el-descriptions-item label="期望金额">{{ detail.expectedAmount }}</el-descriptions-item>
+        <el-descriptions-item label="期望金额">¥{{ formatAmount(detail.expectedAmount) }}</el-descriptions-item>
         <el-descriptions-item label="倒计时">{{ countdownText }}</el-descriptions-item>
         <el-descriptions-item label="事实说明" :span="2">{{ detail.factDescription }}</el-descriptions-item>
         <el-descriptions-item label="诉求说明" :span="2">{{ detail.requestDescription }}</el-descriptions-item>
@@ -26,17 +26,27 @@
         <template #header><span>卖家协商方案</span></template>
         <el-descriptions border :column="2">
           <el-descriptions-item label="方案类型">{{ detail.sellerProposal.proposalType || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="方案金额">{{ detail.sellerProposal.proposalAmount || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="方案金额">¥{{ formatAmount(detail.sellerProposal.proposalAmount) }}</el-descriptions-item>
           <el-descriptions-item label="运费承担">{{ detail.sellerProposal.freightBearer || '-' }}</el-descriptions-item>
           <el-descriptions-item label="方案说明" :span="2">{{ detail.sellerProposal.proposalDescription || '-' }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
       <el-card class="sub-card" shadow="never">
-        <template #header><span>协商执行语义</span></template>
+        <template #header><span>平台裁决与执行进度</span></template>
         <el-descriptions border :column="1">
-          <el-descriptions-item label="执行状态">{{ detail.executionStatusLabel || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="执行说明">{{ detail.executionRemark || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="裁决类型">
+            {{ decisionTypeLabel(detail.finalDecisionType) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="执行状态">
+            {{ detail.executionStatusLabel || detail.finalExecutionStatus || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="结果说明">
+            {{ detail.finalResultDescription || detail.executionRemark || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="下一步提示">
+            {{ detail.nextActionHint || '-' }}
+          </el-descriptions-item>
         </el-descriptions>
       </el-card>
 
@@ -96,7 +106,23 @@ const statusType = (status) => {
   if (status === 'NEGOTIATION_SUCCESS') return 'success'
   if (status === 'NEGOTIATION_FAILED' || status === 'SELLER_TIMEOUT') return 'warning'
   if (status === 'ESCALATED_TO_ARBITRATION') return 'danger'
+  if (status === 'ARBITRATION_DECIDED' || status === 'ARBITRATION_EXECUTING') return 'warning'
+  if (status === 'ARBITRATION_EXECUTED' || status === 'CLOSED') return 'success'
   return 'info'
+}
+
+const decisionTypeLabel = (value) => {
+  const map = {
+    SUPPORT_FULL_REFUND: '支持全额退款',
+    SUPPORT_PARTIAL_REFUND: '支持部分退款',
+    SUPPORT_RETURN_AND_REFUND: '支持退货退款',
+    SUPPORT_REPLACE: '支持换货/补发',
+    REJECT_BUYER_REQUEST: '驳回买家诉求',
+    REQUIRE_SUPPLEMENT: '要求补充材料',
+    CLOSE_WITH_NEGOTIATION_RESULT: '按协商结果结案',
+    OTHER: '其他'
+  }
+  return map[value] || '-'
 }
 
 const formatTime = (time) => {
@@ -104,6 +130,11 @@ const formatTime = (time) => {
   const date = new Date(time)
   if (Number.isNaN(date.getTime())) return String(time)
   return date.toLocaleString('zh-CN')
+}
+
+const formatAmount = (amount) => {
+  const value = Number(amount || 0)
+  return Number.isNaN(value) ? '0.00' : value.toFixed(2)
 }
 
 const countdownText = computed(() => {
@@ -222,3 +253,4 @@ onMounted(loadDetail)
   flex-wrap: wrap;
 }
 </style>
+

@@ -75,6 +75,15 @@ public class DisputeRequestEntity implements Serializable {
     @TableField("escalated_arbitration_id")
     private Long escalatedArbitrationId;
 
+    @TableField("final_decision_type")
+    private String finalDecisionType;
+
+    @TableField("final_execution_status")
+    private String finalExecutionStatus;
+
+    @TableField("final_result_description")
+    private String finalResultDescription;
+
     @TableField("expire_time")
     private LocalDateTime expireTime;
 

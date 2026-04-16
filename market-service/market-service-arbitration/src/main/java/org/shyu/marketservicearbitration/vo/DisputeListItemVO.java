@@ -26,6 +26,12 @@ public class DisputeListItemVO {
 
     private String sellerResponseType;
 
+    private String finalDecisionType;
+
+    private String finalExecutionStatus;
+
+    private String finalResultDescription;
+
     private LocalDateTime expireTime;
 
     private LocalDateTime createTime;
@@ -34,4 +40,3 @@ public class DisputeListItemVO {
 
     private Boolean canEscalate;
 }
-

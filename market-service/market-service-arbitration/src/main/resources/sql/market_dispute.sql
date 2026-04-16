@@ -1,6 +1,6 @@
--- =========================
--- 争议协商流程数据库脚本
--- =========================
+-- =========================================
+-- 争议协商 + 仲裁执行闭环（MySQL 8+）
+-- =========================================
 
 CREATE TABLE IF NOT EXISTS `t_dispute_request` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS `t_dispute_request` (
   `seller_response_amount` decimal(12,2) DEFAULT NULL,
   `seller_response_freight_bearer` varchar(32) DEFAULT NULL,
   `escalated_arbitration_id` bigint DEFAULT NULL,
+  `final_decision_type` varchar(64) DEFAULT NULL,
+  `final_execution_status` varchar(64) DEFAULT NULL,
+  `final_result_description` varchar(2000) DEFAULT NULL,
   `expire_time` datetime DEFAULT NULL,
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -65,14 +68,35 @@ CREATE TABLE IF NOT EXISTS `t_dispute_negotiation_log` (
   KEY `idx_dispute_log_create` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =========================
--- 扩展仲裁表字段
--- =========================
+CREATE TABLE IF NOT EXISTS `t_arbitration_execution_task` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `arbitration_id` bigint NOT NULL,
+  `dispute_id` bigint DEFAULT NULL,
+  `order_id` bigint DEFAULT NULL,
+  `execution_type` varchar(64) NOT NULL,
+  `execution_status` varchar(64) NOT NULL,
+  `payload` text,
+  `result_message` varchar(2000) DEFAULT NULL,
+  `retry_count` int NOT NULL DEFAULT 0,
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `finish_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_execution_task_arb` (`arbitration_id`),
+  KEY `idx_execution_task_dispute` (`dispute_id`),
+  KEY `idx_execution_task_status` (`execution_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================================
+-- 增量变更（幂等）
+-- =========================================
+
 ALTER TABLE `t_arbitration`
-    ADD COLUMN `source_dispute_id` bigint DEFAULT NULL COMMENT '来源争议ID',
-    ADD COLUMN `request_type` varchar(64) DEFAULT NULL COMMENT '诉求类型',
-    ADD COLUMN `request_description` varchar(2000) DEFAULT NULL COMMENT '诉求说明',
-    ADD COLUMN `expected_amount` decimal(12,2) DEFAULT NULL COMMENT '期望金额',
-    ADD COLUMN `buyer_claim` varchar(2000) DEFAULT NULL COMMENT '买家事实主张',
-    ADD COLUMN `decision_remark` varchar(2000) DEFAULT NULL COMMENT '裁决备注',
-    ADD COLUMN `reject_reason` varchar(2000) DEFAULT NULL COMMENT '驳回原因';
+    ADD COLUMN `
+` varchar(64) DEFAULT NULL COMMENT '裁决类型',
+    ADD COLUMN `execution_type` varchar(64) DEFAULT NULL COMMENT '执行类型',
+    ADD COLUMN `execution_status` varchar(64) DEFAULT NULL COMMENT '执行状态',
+    ADD COLUMN `execution_remark` varchar(2000) DEFAULT NULL COMMENT '执行备注',
+    ADD COLUMN `execution_payload` text COMMENT '执行载荷(JSON)',
+    ADD COLUMN `decide_time` datetime DEFAULT NULL COMMENT '裁决时间',
+    ADD COLUMN `execute_time` datetime DEFAULT NULL COMMENT '执行完成时间';

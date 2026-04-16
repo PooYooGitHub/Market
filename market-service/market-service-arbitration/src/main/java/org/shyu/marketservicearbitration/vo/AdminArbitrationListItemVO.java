@@ -26,6 +26,18 @@ public class AdminArbitrationListItemVO {
 
     private String result;
 
+    private String decisionType;
+
+    private String decisionTypeLabel;
+
+    private String executionType;
+
+    private String executionTypeLabel;
+
+    private String executionStatus;
+
+    private String executionStatusLabel;
+
     private Long orderId;
 
     private String orderNo;

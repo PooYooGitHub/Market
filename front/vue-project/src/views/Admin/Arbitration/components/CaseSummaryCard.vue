@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-card class="case-summary-card" shadow="never">
     <div class="summary-head">
       <div class="head-main">
@@ -7,6 +7,9 @@
           <el-tag :type="statusInfo.type" effect="dark">{{ statusInfo.label }}</el-tag>
           <el-tag type="warning" effect="plain">{{ caseData.reasonLabel }}</el-tag>
           <el-tag type="success" effect="plain">¥{{ formatAmount(caseData.orderAmount) }}</el-tag>
+          <el-tag v-if="caseData.executionStatusLabel" type="info" effect="plain">
+            执行：{{ caseData.executionStatusLabel }}
+          </el-tag>
         </div>
       </div>
       <div class="head-amount">
@@ -18,23 +21,23 @@
     <div class="summary-grid">
       <div class="summary-item">
         <span class="label">商品名称</span>
-        <span class="value strong">{{ caseData.productName }}</span>
+        <span class="value strong">{{ caseData.productName || '-' }}</span>
       </div>
       <div class="summary-item">
         <span class="label">订单号</span>
-        <span class="value">{{ caseData.orderNo }}</span>
+        <span class="value">{{ caseData.orderNo || '-' }}</span>
       </div>
       <div class="summary-item">
         <span class="label">申请人</span>
-        <span class="value">{{ caseData.applicant }}</span>
+        <span class="value">{{ caseData.applicant || '-' }}</span>
       </div>
       <div class="summary-item">
         <span class="label">被申请人</span>
-        <span class="value">{{ caseData.respondent }}</span>
+        <span class="value">{{ caseData.respondent || '-' }}</span>
       </div>
       <div class="summary-item">
         <span class="label">发起时间</span>
-        <span class="value">{{ caseData.createTime }}</span>
+        <span class="value">{{ caseData.createTime || '-' }}</span>
       </div>
       <div class="summary-item">
         <span class="label">当前处理人</span>
@@ -43,6 +46,14 @@
       <div class="summary-item">
         <span class="label">来源争议ID</span>
         <span class="value">{{ caseData.sourceDisputeId || '-' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">裁决类型</span>
+        <span class="value">{{ caseData.decisionTypeLabel || '-' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">执行动作</span>
+        <span class="value">{{ caseData.executionTypeLabel || '-' }}</span>
       </div>
     </div>
 
@@ -65,7 +76,8 @@ const props = defineProps({
 const statusMap = {
   pending: { label: '待处理', type: 'warning' },
   processing: { label: '处理中', type: 'primary' },
-  completed: { label: '已完结', type: 'success' },
+  decided: { label: '已裁决', type: 'warning' },
+  completed: { label: '已执行完成', type: 'success' },
   rejected: { label: '已驳回', type: 'danger' }
 }
 
@@ -73,7 +85,7 @@ const statusInfo = computed(() => statusMap[props.caseData.status] || statusMap.
 
 const formatAmount = (amount) => {
   const value = Number(amount || 0)
-  return value.toFixed(2)
+  return Number.isNaN(value) ? '0.00' : value.toFixed(2)
 }
 </script>
 
@@ -193,3 +205,4 @@ const formatAmount = (amount) => {
   }
 }
 </style>
+

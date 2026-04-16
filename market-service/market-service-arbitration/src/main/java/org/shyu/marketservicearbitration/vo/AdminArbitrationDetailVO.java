@@ -80,7 +80,27 @@ public class AdminArbitrationDetailVO {
 
     private List<ArbitrationTimelineVO> timeline = new ArrayList<>();
 
+    private String decisionType;
+
+    private String decisionTypeLabel;
+
     private String decisionRemark;
+
+    private String executionType;
+
+    private String executionTypeLabel;
+
+    private String executionStatus;
+
+    private String executionStatusLabel;
+
+    private String executionRemark;
+
+    private String executionPayload;
+
+    private LocalDateTime decideTime;
+
+    private LocalDateTime executeTime;
 
     private String rejectReason;
 

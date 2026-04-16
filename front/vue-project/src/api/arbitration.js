@@ -136,7 +136,10 @@ export const arbitrationApi = {
   handleArbitration(data) {
     return this.completeAdminArbitration({
       arbitrationId: data?.arbitrationId ?? data?.id,
-      decisionRemark: data?.decisionRemark ?? data?.result
+      decisionType: data?.decisionType ?? 'OTHER',
+      decisionRemark: data?.decisionRemark ?? data?.result,
+      executionRemark: data?.executionRemark,
+      executionPayload: data?.executionPayload
     })
   },
 
@@ -220,3 +223,4 @@ export const arbitrationApi = {
     })
   }
 }
+

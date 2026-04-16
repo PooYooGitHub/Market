@@ -10,12 +10,15 @@ import java.util.Set;
 public enum DisputeStatusEnum {
     INIT("INIT", "已创建"),
     WAIT_SELLER_RESPONSE("WAIT_SELLER_RESPONSE", "待卖家响应"),
-    SELLER_PROPOSED("SELLER_PROPOSED", "卖家已提替代方案"),
+    SELLER_PROPOSED("SELLER_PROPOSED", "卖家已提出替代方案"),
     WAIT_BUYER_CONFIRM("WAIT_BUYER_CONFIRM", "待买家确认"),
     NEGOTIATION_SUCCESS("NEGOTIATION_SUCCESS", "协商成功"),
     NEGOTIATION_FAILED("NEGOTIATION_FAILED", "协商失败"),
     SELLER_TIMEOUT("SELLER_TIMEOUT", "卖家超时未响应"),
     ESCALATED_TO_ARBITRATION("ESCALATED_TO_ARBITRATION", "已升级仲裁"),
+    ARBITRATION_DECIDED("ARBITRATION_DECIDED", "平台已裁决"),
+    ARBITRATION_EXECUTING("ARBITRATION_EXECUTING", "裁决执行中"),
+    ARBITRATION_EXECUTED("ARBITRATION_EXECUTED", "裁决执行完成"),
     CLOSED("CLOSED", "已关闭");
 
     private static final Set<String> SELLER_RESPONDABLE_STATUSES = new HashSet<>(Arrays.asList(
@@ -54,3 +57,4 @@ public enum DisputeStatusEnum {
         return code;
     }
 }
+
