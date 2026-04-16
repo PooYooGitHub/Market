@@ -14,7 +14,7 @@ public enum DisputeNegotiationActionEnum {
     BUYER_CONFIRM_TIMEOUT("BUYER_CONFIRM_TIMEOUT", "买家确认超时"),
     SELLER_LATE_RESPONSE("SELLER_LATE_RESPONSE", "卖家超时后补响应"),
     ESCALATE_TO_ARBITRATION("ESCALATE_TO_ARBITRATION", "升级仲裁"),
-    SYSTEM_AUTO_EXECUTE("SYSTEM_AUTO_EXECUTE", "系统自动执行协商结果");
+    SYSTEM_AUTO_EXECUTE("SYSTEM_AUTO_EXECUTE", "系统记录协商执行语义");
 
     private final String code;
     private final String label;
@@ -33,4 +33,3 @@ public enum DisputeNegotiationActionEnum {
         return code;
     }
 }
-

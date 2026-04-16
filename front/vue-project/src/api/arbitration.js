@@ -167,6 +167,13 @@ export const arbitrationApi = {
     })
   },
 
+  getMyDisputeByOrderId(orderId) {
+    return request({
+      url: `/api/dispute/my/order/${orderId}`,
+      method: 'get'
+    })
+  },
+
   getDisputeDetail(id) {
     return request({
       url: `/api/dispute/detail/${id}`,

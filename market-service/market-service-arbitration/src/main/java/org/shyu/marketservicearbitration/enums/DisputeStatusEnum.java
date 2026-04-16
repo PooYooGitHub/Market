@@ -10,7 +10,7 @@ import java.util.Set;
 public enum DisputeStatusEnum {
     INIT("INIT", "已创建"),
     WAIT_SELLER_RESPONSE("WAIT_SELLER_RESPONSE", "待卖家响应"),
-    SELLER_PROPOSED("SELLER_PROPOSED", "卖家已提出方案"),
+    SELLER_PROPOSED("SELLER_PROPOSED", "卖家已提替代方案"),
     WAIT_BUYER_CONFIRM("WAIT_BUYER_CONFIRM", "待买家确认"),
     NEGOTIATION_SUCCESS("NEGOTIATION_SUCCESS", "协商成功"),
     NEGOTIATION_FAILED("NEGOTIATION_FAILED", "协商失败"),
@@ -54,4 +54,3 @@ public enum DisputeStatusEnum {
         return code;
     }
 }
-

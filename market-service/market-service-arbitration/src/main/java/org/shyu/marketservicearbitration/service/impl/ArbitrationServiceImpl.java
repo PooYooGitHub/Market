@@ -25,11 +25,13 @@ import org.shyu.marketservicearbitration.entity.ArbitrationEntity;
 import org.shyu.marketservicearbitration.entity.ArbitrationEvidenceSubmissionEntity;
 import org.shyu.marketservicearbitration.entity.ArbitrationLogEntity;
 import org.shyu.marketservicearbitration.entity.ArbitrationSupplementRequestEntity;
+import org.shyu.marketservicearbitration.entity.DisputeRequestEntity;
 import org.shyu.marketservicearbitration.mapper.ArbitrationMapper;
 import org.shyu.marketservicearbitration.service.IArbitrationEvidenceSubmissionService;
 import org.shyu.marketservicearbitration.service.IArbitrationLogService;
 import org.shyu.marketservicearbitration.service.IArbitrationService;
 import org.shyu.marketservicearbitration.service.IArbitrationSupplementRequestService;
+import org.shyu.marketservicearbitration.service.IDisputeService;
 import org.shyu.marketservicearbitration.vo.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,6 +68,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
     @Autowired private IArbitrationLogService arbitrationLogService;
     @Autowired private IArbitrationSupplementRequestService supplementRequestService;
     @Autowired private IArbitrationEvidenceSubmissionService evidenceSubmissionService;
+    @Autowired private IDisputeService disputeService;
     @Autowired private TradeFeignClient tradeFeignClient;
     @Autowired private ProductFeignClient productFeignClient;
     @Autowired private UserFeignClient userFeignClient;
@@ -352,6 +355,7 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         Integer status = normalizeStatus(e.getStatus());
         OrderDTO orderDTO = fetchOrder(e.getOrderId());
         ProductDTO productDTO = orderDTO == null ? null : fetchProduct(orderDTO.getProductId());
+        DisputeRequestEntity sourceDispute = e.getSourceDisputeId() == null ? null : disputeService.getById(e.getSourceDisputeId());
         List<ArbitrationEvidenceSubmissionEntity> submissions = evidenceSubmissionService.listByArbitrationId(arbitrationId);
         List<ArbitrationLogEntity> logs = arbitrationLogService.getLogsByArbitrationId(arbitrationId);
         List<ArbitrationSupplementRequestEntity> requests = supplementRequestService.listByArbitrationId(arbitrationId);
@@ -382,16 +386,16 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         vo.setHandlerId(e.getHandlerId());
         vo.setHandlerName(resolveHandlerName(e.getHandlerId()));
 
-        vo.setBuyerClaim(firstText(e.getBuyerClaim(), resolveBuyerClaim(e, submissions)));
+        vo.setBuyerClaim(resolveBuyerClaim(e, submissions));
         vo.setSellerClaim(resolveSellerClaim(submissions));
         vo.setPlatformFocus(resolvePlatformFocus(e, orderDTO, requests));
-        vo.setArbitrationRequest(firstText(e.getRequestDescription(), e.getDescription(), reasonLabel(e.getReason())));
+        vo.setArbitrationRequest(resolveArbitrationRequest(e));
         vo.setNegotiationSummary(buildNegotiationSummary(submissions));
 
         vo.setApplicantEvidence(buildEvidenceByRole(e, submissions, BUYER));
         vo.setRespondentEvidence(buildEvidenceByRole(e, submissions, SELLER));
         vo.setSystemEvidence(buildSystemEvidence(e, orderDTO, productDTO, requests));
-        vo.setChatSummary(buildChatSummary(submissions));
+        vo.setChatSummary(buildChatSummaryByOrder(e, sourceDispute));
         vo.setOrderSnapshot(buildOrderSnapshot(orderDTO));
         vo.setProductSnapshot(buildProductSnapshot(productDTO));
         vo.setTimeline(buildTimeline(logs));
@@ -613,38 +617,35 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         return list;
     }
 
-    private List<ArbitrationChatSummaryVO> buildChatSummary(List<ArbitrationEvidenceSubmissionEntity> submissions) {
-        List<ArbitrationChatSummaryVO> list = new ArrayList<>();
+    private List<ArbitrationChatSummaryVO> buildChatSummaryByOrder(ArbitrationEntity arbitration,
+                                                                    DisputeRequestEntity sourceDispute) {
+        LocalDateTime disputeCreateTime = sourceDispute == null ? arbitration.getCreateTime() : sourceDispute.getCreateTime();
+        List<DisputeChatSummaryVO> chatSummary = disputeService.buildChatSummaryByOrder(
+                arbitration.getOrderId(),
+                arbitration.getApplicantId(),
+                arbitration.getRespondentId(),
+                disputeCreateTime,
+                LocalDateTime.now()
+        );
+        List<ArbitrationChatSummaryVO> result = new ArrayList<>();
         long seed = 1L;
-        for (ArbitrationEvidenceSubmissionEntity sub : submissions) {
-            String speaker = BUYER.equalsIgnoreCase(sub.getSubmitterRole()) ? "买家" :
-                    (SELLER.equalsIgnoreCase(sub.getSubmitterRole()) ? "卖家" : "平台");
-            if (StringUtils.hasText(sub.getClaimText())) {
-                ArbitrationChatSummaryVO item = new ArbitrationChatSummaryVO();
-                item.setId(seed++);
-                item.setSpeaker(speaker);
-                item.setTime(sub.getCreateTime());
-                item.setContent(sub.getClaimText());
-                list.add(item);
-            }
-            if (StringUtils.hasText(sub.getFactText())) {
-                ArbitrationChatSummaryVO item = new ArbitrationChatSummaryVO();
-                item.setId(seed++);
-                item.setSpeaker(speaker);
-                item.setTime(sub.getCreateTime());
-                item.setContent(sub.getFactText());
-                list.add(item);
-            }
+        for (DisputeChatSummaryVO item : chatSummary) {
+            ArbitrationChatSummaryVO vo = new ArbitrationChatSummaryVO();
+            vo.setId(seed++);
+            vo.setSpeaker(firstText(item.getSpeaker(), "系统"));
+            vo.setTime(item.getTime());
+            vo.setContent(firstText(item.getContent(), "暂无可用聊天摘要"));
+            result.add(vo);
         }
-        if (list.isEmpty()) {
-            ArbitrationChatSummaryVO item = new ArbitrationChatSummaryVO();
-            item.setId(1L);
-            item.setSpeaker("平台");
-            item.setTime(LocalDateTime.now());
-            item.setContent("暂无可提取的聊天摘要，建议结合订单与证据材料判定。");
-            list.add(item);
+        if (result.isEmpty()) {
+            ArbitrationChatSummaryVO empty = new ArbitrationChatSummaryVO();
+            empty.setId(1L);
+            empty.setSpeaker("系统");
+            empty.setTime(LocalDateTime.now());
+            empty.setContent("暂无可用聊天摘要");
+            result.add(empty);
         }
-        return list;
+        return result;
     }
 
     private String buildNegotiationSummary(List<ArbitrationEvidenceSubmissionEntity> submissions) {
@@ -731,6 +732,13 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
         return ArbitrationReason.getByCode(reason).getDescription();
     }
 
+    private String resolveArbitrationRequest(ArbitrationEntity arbitration) {
+        if (StringUtils.hasText(arbitration.getRequestDescription())) {
+            return arbitration.getRequestDescription().trim();
+        }
+        return "未填写明确诉求";
+    }
+
     private String buildCaseNumber(Long id) {
         return "ARB" + String.format("%06d", id == null ? 0L : id);
     }
@@ -760,10 +768,9 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
                 .max(Comparator.comparing(ArbitrationEvidenceSubmissionEntity::getCreateTime,
                         Comparator.nullsLast(Comparator.naturalOrder())));
         if (latestBuyer.isPresent()) {
-            return firstText(latestBuyer.get().getClaimText(), latestBuyer.get().getFactText(),
-                    arbitration.getDescription(), "暂无买家主张");
+            return firstText(arbitration.getBuyerClaim(), latestBuyer.get().getFactText(), "未填写事实主张");
         }
-        return firstText(arbitration.getDescription(), "暂无买家主张");
+        return firstText(arbitration.getBuyerClaim(), "未填写事实主张");
     }
 
     private String resolveSellerClaim(List<ArbitrationEvidenceSubmissionEntity> submissions) {
@@ -929,10 +936,10 @@ public class ArbitrationServiceImpl extends ServiceImpl<ArbitrationMapper, Arbit
                 product.put("productId", p.getId()); product.put("title", p.getTitle()); product.put("description", p.getDescription()); product.put("price", p.getPrice()); product.put("sellerId", p.getSellerId()); product.put("imageUrls", p.getImageUrls()); product.put("status", p.getStatus()); product.put("snapshotAt", LocalDateTime.now());
             }
             LocalDateTime start = o.getCreateTime() == null ? LocalDateTime.now().minusDays(7) : o.getCreateTime().minusDays(1);
-            chat.put("scope", "ORDER_CONVERSATION_WINDOW"); chat.put("windowStart", start); chat.put("windowEnd", LocalDateTime.now()); chat.put("source", "MESSAGE_SERVICE_PENDING_INTEGRATION"); chat.put("note", "当前版本仅提供会话范围元信息，聊天正文将由消息服务聚合接口补齐");
+            chat.put("scope", "ORDER_CONVERSATION_WINDOW"); chat.put("windowStart", start); chat.put("windowEnd", LocalDateTime.now()); chat.put("source", "MESSAGE_RULE_SUMMARY"); chat.put("note", "聊天摘要由消息服务历史记录按规则提取，空结果会返回明确空态");
         } else {
             order.put("snapshotAt", LocalDateTime.now()); order.put("note", "订单快照拉取失败或订单不存在");
-            chat.put("scope", "ORDER_CONVERSATION_WINDOW"); chat.put("source", "MESSAGE_SERVICE_PENDING_INTEGRATION"); chat.put("note", "缺少订单信息，无法计算会话时间窗");
+            chat.put("scope", "ORDER_CONVERSATION_WINDOW"); chat.put("source", "MESSAGE_RULE_SUMMARY"); chat.put("note", "缺少订单信息，聊天摘要仅能返回空态");
         }
         v.setOrderSnapshot(order); v.setProductSnapshot(product); v.setChatContext(chat);
         return v;

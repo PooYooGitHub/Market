@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.shyu.marketapimessage.dto.MessageChatHistoryPageDTO;
+import org.shyu.marketapimessage.dto.MessageChatRecordDTO;
+import org.shyu.marketapimessage.feign.MessageFeignClient;
 import org.shyu.marketapitrade.dto.OrderDTO;
 import org.shyu.marketapitrade.feign.TradeFeignClient;
 import org.shyu.marketcommon.exception.BusinessException;
@@ -46,6 +48,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -65,12 +68,27 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
     private static final int ARBITRATION_PENDING = 0;
     private static final int SELLER_RESPONSE_TIMEOUT_HOURS = 24;
     private static final int BUYER_CONFIRM_TIMEOUT_HOURS = 24;
+    private static final int CHAT_PAGE_SIZE = 50;
+    private static final int CHAT_MAX_PAGES = 6;
+    private static final int CHAT_RESULT_LIMIT = 20;
     private static final BigDecimal HIGH_AMOUNT_ESCALATE_THRESHOLD = new BigDecimal("5000.00");
     private static final String EVIDENCE_BIZ_DISPUTE = "DISPUTE";
     private static final String EVIDENCE_BIZ_ARBITRATION = "ARBITRATION";
+    private static final String EXECUTION_STATUS_FULL_REFUND_ACCEPTED = "FULL_REFUND_ACCEPTED";
+    private static final String EXECUTION_STATUS_PARTIAL_REFUND_ACCEPTED = "PARTIAL_REFUND_ACCEPTED";
+    private static final String EXECUTION_STATUS_RETURN_AND_REFUND_PENDING = "RETURN_AND_REFUND_PENDING";
+    private static final String EXECUTION_STATUS_NEGOTIATION_SUCCESS = "NEGOTIATION_SUCCESS";
+    private static final String EXECUTION_STATUS_NOT_APPLICABLE = "NOT_APPLICABLE";
+
+    private static final List<String> DISPUTE_CHAT_KEYWORDS = Arrays.asList(
+            "功能正常", "无瑕疵", "已说明", "退款", "退货", "运费", "损坏", "描述不符", "协商", "同意", "拒绝"
+    );
 
     @Autowired
     private TradeFeignClient tradeFeignClient;
+
+    @Autowired
+    private MessageFeignClient messageFeignClient;
 
     @Autowired
     private DisputeEvidenceMapper disputeEvidenceMapper;
@@ -139,6 +157,23 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
     }
 
     @Override
+    public DisputeListItemVO getMyDisputeByOrderId(Long buyerId, Long orderId) {
+        checkAndMarkTimeout();
+        QueryWrapper<DisputeRequestEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("buyer_id", buyerId)
+                .eq("order_id", orderId)
+                .orderByDesc("create_time")
+                .last("limit 1");
+        DisputeRequestEntity entity = getOne(wrapper, false);
+        if (entity == null) {
+            return null;
+        }
+        refreshSingleTimeout(entity.getId());
+        DisputeRequestEntity latest = getById(entity.getId());
+        return latest == null ? null : toListItemVO(latest);
+    }
+
+    @Override
     public IPage<DisputeListItemVO> getSellerPendingDisputes(Long sellerId, Integer current, Integer size) {
         checkAndMarkTimeout();
         Page<DisputeRequestEntity> page = new Page<>(current, size);
@@ -179,6 +214,10 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         vo.setCanSellerRespond(DisputeStatusEnum.canSellerRespond(dispute.getStatus()));
         vo.setCanBuyerConfirm(DisputeStatusEnum.WAIT_BUYER_CONFIRM.getCode().equals(dispute.getStatus()));
         vo.setCanEscalate(DisputeStatusEnum.canEscalate(dispute.getStatus()));
+        NegotiationExecution execution = resolveNegotiationExecution(dispute);
+        vo.setExecutionStatus(execution.getCode());
+        vo.setExecutionStatusLabel(execution.getLabel());
+        vo.setExecutionRemark(execution.getRemark());
         return vo;
     }
 
@@ -212,6 +251,7 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         dispute.setExpireTime(null);
 
         if (SellerResponseTypeEnum.AGREE.getCode().equals(responseType)) {
+            dispute.setSellerResponseProposalType(dispute.getRequestType());
             dispute.setSellerResponseAmount(dispute.getExpectedAmount());
             dispute.setStatus(DisputeStatusEnum.NEGOTIATION_SUCCESS.getCode());
             if (StringUtils.hasText(dispute.getSellerResponseDescription())) {
@@ -272,6 +312,9 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         if (Boolean.TRUE.equals(dto.getAcceptProposal())) {
             dispute.setStatus(DisputeStatusEnum.NEGOTIATION_SUCCESS.getCode());
             dispute.setExpireTime(null);
+            if (!StringUtils.hasText(dispute.getSellerResponseProposalType())) {
+                dispute.setSellerResponseProposalType(dispute.getRequestType());
+            }
             if (!updateById(dispute)) {
                 throw new BusinessException("买家确认失败");
             }
@@ -362,6 +405,11 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         builder.append("争议ID=").append(disputeId)
                 .append("，当前状态=").append(DisputeStatusEnum.getLabel(dispute.getStatus()))
                 .append("，轮次=").append(dispute.getCurrentRound() == null ? 1 : dispute.getCurrentRound());
+        if (DisputeStatusEnum.NEGOTIATION_SUCCESS.getCode().equals(dispute.getStatus())) {
+            NegotiationExecution execution = resolveNegotiationExecution(dispute);
+            builder.append("，执行语义=").append(execution.getLabel());
+            builder.append("，执行说明=").append(execution.getRemark());
+        }
         if (!logs.isEmpty()) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             int count = 0;
@@ -382,41 +430,40 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
     @Override
     public List<DisputeChatSummaryVO> buildChatSummaryByOrder(Long orderId, Long buyerId, Long sellerId,
                                                               LocalDateTime startTime, LocalDateTime endTime) {
+        if (orderId == null || buyerId == null || sellerId == null) {
+            return buildEmptyChatSummary("聊天摘要参数不完整");
+        }
+
+        OrderDTO order = fetchOrderQuietly(orderId);
+        List<ChatWindow> windows = buildChatWindows(order, startTime, endTime);
+        List<MessageChatRecordDTO> messages = fetchConversationMessages(buyerId, sellerId);
+        if (messages.isEmpty()) {
+            return buildEmptyChatSummary("未检索到聊天消息");
+        }
+
+        Long orderProductId = order == null ? null : order.getProductId();
+        List<MessageChatRecordDTO> relevantMessages = messages.stream()
+                .filter(Objects::nonNull)
+                .filter(item -> item.getCreateTime() != null)
+                .filter(item -> inAnyWindow(item.getCreateTime(), windows))
+                .filter(item -> matchOrder(orderProductId, item.getProductId()))
+                .filter(item -> containsDisputeKeyword(item.getContent()))
+                .sorted(Comparator.comparing(MessageChatRecordDTO::getCreateTime))
+                .collect(Collectors.toList());
+
+        if (relevantMessages.isEmpty()) {
+            return buildEmptyChatSummary("时间窗内未命中争议关键词消息");
+        }
+
         List<DisputeChatSummaryVO> result = new ArrayList<>();
-        DisputeChatSummaryVO context = new DisputeChatSummaryVO();
-        context.setSpeaker("系统");
-        context.setRole(DisputeActorRoleEnum.SYSTEM.getCode());
-        context.setTime(LocalDateTime.now());
-        context.setSourceType("RULE_CONTEXT");
-        context.setContent("聊天摘要时间窗：" + firstText(String.valueOf(startTime), "-") + " ~ "
-                + firstText(String.valueOf(endTime), "-")
-                + "；当前版本基于协商日志规则构建，消息服务接入预留在该接口");
-        result.add(context);
-
-        QueryWrapper<DisputeRequestEntity> wrapper = new QueryWrapper<>();
-        wrapper.eq("order_id", orderId).eq("buyer_id", buyerId).eq("seller_id", sellerId);
-        if (startTime != null) {
-            wrapper.ge("create_time", startTime);
-        }
-        if (endTime != null) {
-            wrapper.le("create_time", endTime);
-        }
-        List<DisputeRequestEntity> disputes = list(wrapper);
-        if (disputes.isEmpty()) {
-            return result;
-        }
-
-        List<Long> disputeIds = disputes.stream().map(DisputeRequestEntity::getId).collect(Collectors.toList());
-        QueryWrapper<DisputeNegotiationLogEntity> logWrapper = new QueryWrapper<>();
-        logWrapper.in("dispute_id", disputeIds).orderByAsc("create_time");
-        List<DisputeNegotiationLogEntity> logs = disputeNegotiationLogMapper.selectList(logWrapper);
-        for (DisputeNegotiationLogEntity logEntity : logs) {
+        for (int i = 0; i < relevantMessages.size() && i < CHAT_RESULT_LIMIT; i++) {
+            MessageChatRecordDTO message = relevantMessages.get(i);
             DisputeChatSummaryVO item = new DisputeChatSummaryVO();
-            item.setSpeaker(resolveSpeaker(logEntity.getActorRole()));
-            item.setRole(logEntity.getActorRole());
-            item.setTime(logEntity.getCreateTime());
-            item.setSourceType("NEGOTIATION_LOG");
-            item.setContent(firstText(logEntity.getContent(), DisputeNegotiationActionEnum.labelOf(logEntity.getActionType())));
+            item.setSpeaker(resolveSpeakerByUserId(message.getSenderId(), buyerId, sellerId));
+            item.setRole(resolveRoleByUserId(message.getSenderId(), buyerId, sellerId));
+            item.setTime(message.getCreateTime());
+            item.setSourceType("MESSAGE_RULE");
+            item.setContent(buildSummaryContent(message.getContent(), locateWindowLabel(message.getCreateTime(), windows)));
             result.add(item);
         }
         return result;
@@ -557,19 +604,9 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
 
     private void executeNegotiationResult(DisputeRequestEntity dispute, String proposalType,
                                           BigDecimal proposalAmount, String description) {
-        String normalizedProposalType = normalizeUpper(firstText(proposalType, dispute.getRequestType()));
-        String executeRemark;
-        if ("FULL_REFUND".equals(normalizedProposalType)) {
-            executeRemark = "系统进入全额退款流程";
-        } else if ("PARTIAL_REFUND".equals(normalizedProposalType)) {
-            executeRemark = "系统进入部分退款流程，金额：" + (proposalAmount == null ? "0" : proposalAmount.toPlainString());
-        } else if ("RETURN_AND_REFUND".equals(normalizedProposalType)) {
-            executeRemark = "系统进入退货退款流程（先退货后退款）";
-        } else if ("REPLACE".equals(normalizedProposalType) || "RESEND".equals(normalizedProposalType)) {
-            executeRemark = "系统预留补发/换货执行能力";
-        } else {
-            executeRemark = "系统进入协商成功自动处理流程";
-        }
+        NegotiationExecution execution = resolveExecutionByProposalType(proposalType, proposalAmount);
+        String executeRemark = "协商已达成，执行语义：" + execution.getLabel()
+                + "。当前仅完成协商状态收口，等待后续执行，尚未触发真实退款/退货链路。";
         if (StringUtils.hasText(description)) {
             executeRemark = executeRemark + "；方案说明：" + description.trim();
         }
@@ -592,7 +629,7 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         arbitration.setApplicantId(dispute.getBuyerId());
         arbitration.setRespondentId(dispute.getSellerId());
         arbitration.setReason(dispute.getReason());
-        arbitration.setDescription(dispute.getRequestDescription());
+        arbitration.setDescription(dispute.getFactDescription());
         arbitration.setEvidence(toJson(buyerEvidenceUrls));
         arbitration.setStatus(ARBITRATION_PENDING);
         arbitration.setSourceDisputeId(dispute.getId());
@@ -709,18 +746,192 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         return builder.toString();
     }
 
-    private String resolveSpeaker(String role) {
-        String normalized = normalizeUpper(role);
-        if (DisputeActorRoleEnum.BUYER.getCode().equals(normalized)) {
+    private List<MessageChatRecordDTO> fetchConversationMessages(Long buyerId, Long sellerId) {
+        List<MessageChatRecordDTO> allMessages = new ArrayList<>();
+        for (int pageNum = 1; pageNum <= CHAT_MAX_PAGES; pageNum++) {
+            Result<MessageChatHistoryPageDTO> response;
+            try {
+                response = messageFeignClient.getChatHistory(buyerId, sellerId, pageNum, CHAT_PAGE_SIZE);
+            } catch (Exception e) {
+                log.warn("fetch chat history failed, buyerId={}, sellerId={}, pageNum={}", buyerId, sellerId, pageNum, e);
+                break;
+            }
+
+            if (response == null || !response.isSuccess() || response.getData() == null) {
+                break;
+            }
+            MessageChatHistoryPageDTO pageData = response.getData();
+            List<MessageChatRecordDTO> records = pageData.getRecords();
+            if (records == null || records.isEmpty()) {
+                break;
+            }
+            allMessages.addAll(records);
+
+            Long pages = pageData.getPages();
+            if ((pages != null && pages > 0 && pageNum >= pages) || records.size() < CHAT_PAGE_SIZE) {
+                break;
+            }
+        }
+        return allMessages;
+    }
+
+    private List<ChatWindow> buildChatWindows(OrderDTO order, LocalDateTime disputeStart, LocalDateTime endTime) {
+        List<ChatWindow> windows = new ArrayList<>();
+        if (order != null && order.getCreateTime() != null) {
+            LocalDateTime orderCreateTime = order.getCreateTime();
+            windows.add(new ChatWindow("下单前3天", orderCreateTime.minusDays(3), orderCreateTime));
+
+            LocalDate orderDate = orderCreateTime.toLocalDate();
+            windows.add(new ChatWindow("下单当天", orderDate.atStartOfDay(), orderDate.plusDays(1).atStartOfDay()));
+        }
+        if (disputeStart != null) {
+            windows.add(new ChatWindow("争议发起前后24小时", disputeStart.minusHours(24), disputeStart.plusHours(24)));
+        }
+        if (windows.isEmpty()) {
+            LocalDateTime fallbackStart = disputeStart == null ? LocalDateTime.now().minusDays(3) : disputeStart.minusDays(1);
+            windows.add(new ChatWindow("默认时间窗", fallbackStart, endTime == null ? LocalDateTime.now() : endTime));
+        }
+        return windows;
+    }
+
+    private boolean inAnyWindow(LocalDateTime time, List<ChatWindow> windows) {
+        for (ChatWindow window : windows) {
+            if (window.contains(time)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String locateWindowLabel(LocalDateTime time, List<ChatWindow> windows) {
+        for (ChatWindow window : windows) {
+            if (window.contains(time)) {
+                return window.getLabel();
+            }
+        }
+        return "时间窗外";
+    }
+
+    private boolean containsDisputeKeyword(String content) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        String normalized = content.trim().toLowerCase(Locale.ROOT);
+        for (String keyword : DISPUTE_CHAT_KEYWORDS) {
+            if (normalized.contains(keyword.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchOrder(Long orderProductId, Long messageProductId) {
+        if (orderProductId == null || messageProductId == null) {
+            return true;
+        }
+        return Objects.equals(orderProductId, messageProductId);
+    }
+
+    private String buildSummaryContent(String rawContent, String windowLabel) {
+        String content = trimToEmpty(rawContent);
+        if (content.length() > 160) {
+            content = content.substring(0, 160) + "...";
+        }
+        return "[" + windowLabel + "] " + content;
+    }
+
+    private String resolveSpeakerByUserId(Long senderId, Long buyerId, Long sellerId) {
+        if (Objects.equals(senderId, buyerId)) {
             return "买家";
         }
-        if (DisputeActorRoleEnum.SELLER.getCode().equals(normalized)) {
+        if (Objects.equals(senderId, sellerId)) {
             return "卖家";
         }
-        if (DisputeActorRoleEnum.ADMIN.getCode().equals(normalized)) {
-            return "管理员";
-        }
         return "系统";
+    }
+
+    private String resolveRoleByUserId(Long senderId, Long buyerId, Long sellerId) {
+        if (Objects.equals(senderId, buyerId)) {
+            return DisputeActorRoleEnum.BUYER.getCode();
+        }
+        if (Objects.equals(senderId, sellerId)) {
+            return DisputeActorRoleEnum.SELLER.getCode();
+        }
+        return DisputeActorRoleEnum.SYSTEM.getCode();
+    }
+
+    private List<DisputeChatSummaryVO> buildEmptyChatSummary(String message) {
+        DisputeChatSummaryVO item = new DisputeChatSummaryVO();
+        item.setSpeaker("系统");
+        item.setRole(DisputeActorRoleEnum.SYSTEM.getCode());
+        item.setTime(LocalDateTime.now());
+        item.setSourceType("EMPTY");
+        item.setContent(firstText(message, "暂无可用聊天摘要"));
+        return new ArrayList<>(Collections.singletonList(item));
+    }
+
+    private OrderDTO fetchOrderQuietly(Long orderId) {
+        if (orderId == null) {
+            return null;
+        }
+        try {
+            Result<OrderDTO> result = tradeFeignClient.getOrderById(orderId);
+            if (result != null && result.isSuccess()) {
+                return result.getData();
+            }
+        } catch (Exception e) {
+            log.warn("fetch order failed, orderId={}", orderId, e);
+        }
+        return null;
+    }
+
+    private NegotiationExecution resolveNegotiationExecution(DisputeRequestEntity dispute) {
+        if (dispute == null || !DisputeStatusEnum.NEGOTIATION_SUCCESS.getCode().equals(dispute.getStatus())) {
+            return new NegotiationExecution(
+                    EXECUTION_STATUS_NOT_APPLICABLE,
+                    "当前不处于协商成功状态",
+                    "尚未进入协商执行阶段"
+            );
+        }
+        String proposalType;
+        if (SellerResponseTypeEnum.AGREE.getCode().equals(dispute.getSellerResponseType())) {
+            proposalType = dispute.getRequestType();
+        } else {
+            proposalType = firstText(dispute.getSellerResponseProposalType(), dispute.getRequestType());
+        }
+        BigDecimal amount = dispute.getSellerResponseAmount() == null ? dispute.getExpectedAmount() : dispute.getSellerResponseAmount();
+        return resolveExecutionByProposalType(proposalType, amount);
+    }
+
+    private NegotiationExecution resolveExecutionByProposalType(String proposalType, BigDecimal amount) {
+        String normalized = normalizeUpper(proposalType);
+        if ("FULL_REFUND".equals(normalized)) {
+            return new NegotiationExecution(
+                    EXECUTION_STATUS_FULL_REFUND_ACCEPTED,
+                    "全额退款已协商达成（待执行）",
+                    "协商已达成全额退款，等待后续执行链路"
+            );
+        }
+        if ("PARTIAL_REFUND".equals(normalized)) {
+            String amountText = amount == null ? "0.00" : amount.toPlainString();
+            return new NegotiationExecution(
+                    EXECUTION_STATUS_PARTIAL_REFUND_ACCEPTED,
+                    "部分退款已协商达成（待执行）",
+                    "协商已达成部分退款，金额 " + amountText + "，等待后续执行链路"
+            );
+        }
+        if ("RETURN_AND_REFUND".equals(normalized)) {
+            return new NegotiationExecution(
+                    EXECUTION_STATUS_RETURN_AND_REFUND_PENDING,
+                    "退货退款已协商达成（待执行）",
+                    "协商已达成退货退款，等待后续履约与退款执行"
+            );
+        }
+        return new NegotiationExecution(
+                EXECUTION_STATUS_NEGOTIATION_SUCCESS,
+                "协商成功（待后续执行）",
+                "协商已达成，等待后续执行链路"
+        );
     }
 
     private String toJson(List<String> urls) {
@@ -733,17 +944,6 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
         } catch (Exception e) {
             log.warn("serialize urls failed", e);
             return "[]";
-        }
-    }
-
-    private List<String> parseJsonArray(String json) {
-        if (!StringUtils.hasText(json)) {
-            return Collections.emptyList();
-        }
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
-        } catch (Exception e) {
-            return Collections.singletonList(json);
         }
     }
 
@@ -765,5 +965,51 @@ public class DisputeServiceImpl extends ServiceImpl<DisputeRequestMapper, Disput
             }
         }
         return "";
+    }
+
+    private static class ChatWindow {
+        private final String label;
+        private final LocalDateTime start;
+        private final LocalDateTime end;
+
+        private ChatWindow(String label, LocalDateTime start, LocalDateTime end) {
+            this.label = label;
+            this.start = start;
+            this.end = end;
+        }
+
+        private String getLabel() {
+            return label;
+        }
+
+        private boolean contains(LocalDateTime time) {
+            boolean afterStart = start == null || !time.isBefore(start);
+            boolean beforeEnd = end == null || !time.isAfter(end);
+            return afterStart && beforeEnd;
+        }
+    }
+
+    private static class NegotiationExecution {
+        private final String code;
+        private final String label;
+        private final String remark;
+
+        private NegotiationExecution(String code, String label, String remark) {
+            this.code = code;
+            this.label = label;
+            this.remark = remark;
+        }
+
+        private String getCode() {
+            return code;
+        }
+
+        private String getLabel() {
+            return label;
+        }
+
+        private String getRemark() {
+            return remark;
+        }
     }
 }

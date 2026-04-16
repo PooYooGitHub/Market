@@ -20,6 +20,8 @@ public interface IDisputeService extends IService<DisputeRequestEntity> {
 
     IPage<DisputeListItemVO> getBuyerDisputeList(Long buyerId, Integer current, Integer size);
 
+    DisputeListItemVO getMyDisputeByOrderId(Long buyerId, Long orderId);
+
     IPage<DisputeListItemVO> getSellerPendingDisputes(Long sellerId, Integer current, Integer size);
 
     DisputeDetailVO getDisputeDetail(Long disputeId, Long currentUserId);
@@ -37,4 +39,3 @@ public interface IDisputeService extends IService<DisputeRequestEntity> {
     List<DisputeChatSummaryVO> buildChatSummaryByOrder(Long orderId, Long buyerId, Long sellerId,
                                                         LocalDateTime startTime, LocalDateTime endTime);
 }
-

@@ -1,6 +1,6 @@
 <template>
   <div class="dispute-detail-page" v-loading="loading">
-    <el-card shadow="hover" v-if="detail">
+    <el-card v-if="detail" shadow="hover">
       <template #header>
         <div class="header-row">
           <h3>争议详情 #{{ detail.id }}</h3>
@@ -22,7 +22,7 @@
         <el-descriptions-item label="诉求说明" :span="2">{{ detail.requestDescription }}</el-descriptions-item>
       </el-descriptions>
 
-      <el-card class="sub-card" shadow="never" v-if="detail.sellerProposal">
+      <el-card v-if="detail.sellerProposal" class="sub-card" shadow="never">
         <template #header><span>卖家协商方案</span></template>
         <el-descriptions border :column="2">
           <el-descriptions-item label="方案类型">{{ detail.sellerProposal.proposalType || '-' }}</el-descriptions-item>
@@ -33,8 +33,29 @@
       </el-card>
 
       <el-card class="sub-card" shadow="never">
+        <template #header><span>协商执行语义</span></template>
+        <el-descriptions border :column="1">
+          <el-descriptions-item label="执行状态">{{ detail.executionStatusLabel || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="执行说明">{{ detail.executionRemark || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <el-card class="sub-card" shadow="never">
         <template #header><span>协商记录摘要</span></template>
         <div class="summary">{{ detail.negotiationSummary || '-' }}</div>
+      </el-card>
+
+      <el-card class="sub-card" shadow="never">
+        <template #header><span>聊天摘要</span></template>
+        <div class="chat-list">
+          <div v-for="(item, idx) in detail.chatSummary || []" :key="item.id || idx" class="chat-item">
+            <div class="chat-meta">
+              <span class="speaker">{{ item.speaker || '-' }}</span>
+              <span class="time">{{ formatTime(item.time) }}</span>
+            </div>
+            <div class="chat-content">{{ item.content || '-' }}</div>
+          </div>
+        </div>
       </el-card>
 
       <el-card class="sub-card" shadow="never">
@@ -90,7 +111,7 @@ const countdownText = computed(() => {
   if (seconds <= 0) return '-'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
-  return `${h}小时${m}分`
+  return `${h}小时${m}分钟`
 })
 
 const loadDetail = async () => {
@@ -119,7 +140,7 @@ const confirmProposal = async (accept) => {
       remark: accept ? '买家接受方案' : '买家拒绝方案并升级仲裁'
     })
     ElMessage.success('操作成功')
-    loadDetail()
+    await loadDetail()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error(error?.message || '操作失败')
   }
@@ -137,7 +158,7 @@ const escalate = async () => {
       escalateReason: '买家主动升级仲裁'
     })
     ElMessage.success(`升级成功，仲裁ID：${res?.data || '-'}`)
-    loadDetail()
+    await loadDetail()
   } catch (error) {
     if (error !== 'cancel') ElMessage.error(error?.message || '升级失败')
   }
@@ -164,6 +185,33 @@ onMounted(loadDetail)
 .summary {
   line-height: 1.8;
   color: #303133;
+  white-space: pre-wrap;
+}
+
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-item {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fafafa;
+}
+
+.chat-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #909399;
+}
+
+.chat-content {
+  margin-top: 6px;
+  color: #303133;
+  line-height: 1.6;
 }
 
 .action-row {
@@ -174,4 +222,3 @@ onMounted(loadDetail)
   flex-wrap: wrap;
 }
 </style>
-

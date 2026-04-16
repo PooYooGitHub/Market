@@ -170,9 +170,8 @@ const formatTime = (timeStr) => {
 const loadOrderDispute = async (orderId) => {
   currentDispute.value = null
   try {
-    const listRes = await arbitrationApi.getMyDisputeList({ current: 1, size: 100 })
-    const records = listRes?.data?.records || []
-    currentDispute.value = records.find(item => Number(item.orderId) === Number(orderId)) || null
+    const res = await arbitrationApi.getMyDisputeByOrderId(orderId)
+    currentDispute.value = res?.data || null
   } catch (error) {
     console.warn('加载订单争议状态失败:', error)
   }

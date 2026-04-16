@@ -430,7 +430,7 @@ const normalizeCaseDetail = (detail) => {
     buyerClaim: detail.buyerClaim || '-',
     sellerClaim: detail.sellerClaim || '-',
     platformFocus: detail.platformFocus || '-',
-    arbitrationRequest: detail.arbitrationRequest || '-',
+    arbitrationRequest: detail.arbitrationRequest || '未填写明确诉求',
     sourceDisputeId: detail.sourceDisputeId || null,
     negotiationSummary: detail.negotiationSummary || '-',
     applicantEvidence: normalizeEvidence(detail.applicantEvidence),
@@ -466,12 +466,21 @@ const normalizeEvidence = (list) => {
 }
 
 const normalizeChatSummary = (list) => {
-  if (!Array.isArray(list)) return []
+  if (!Array.isArray(list) || !list.length) {
+    return [
+      {
+        id: 'empty',
+        speaker: '系统',
+        time: '',
+        content: '暂无可用聊天摘要'
+      }
+    ]
+  }
   return list.map((item, index) => ({
     id: item.id || `${index + 1}`,
     speaker: item.speaker || '平台',
     time: formatDateTime(item.time),
-    content: item.content || ''
+    content: item.content || '暂无可用聊天摘要'
   }))
 }
 

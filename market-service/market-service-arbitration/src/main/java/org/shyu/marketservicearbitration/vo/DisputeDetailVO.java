@@ -44,6 +44,12 @@ public class DisputeDetailVO {
 
     private String negotiationSummary;
 
+    private String executionStatus;
+
+    private String executionStatusLabel;
+
+    private String executionRemark;
+
     private SellerProposalVO sellerProposal;
 
     private List<DisputeEvidenceVO> evidenceList = new ArrayList<>();
@@ -62,4 +68,3 @@ public class DisputeDetailVO {
 
     private LocalDateTime updateTime;
 }
-

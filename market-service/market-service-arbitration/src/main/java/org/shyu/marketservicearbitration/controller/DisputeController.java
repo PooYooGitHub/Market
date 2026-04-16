@@ -65,6 +65,20 @@ public class DisputeController {
         }
     }
 
+    @ApiOperation("查询当前买家在指定订单上的争议")
+    @GetMapping("/my/order/{orderId}")
+    @SaCheckLogin
+    public Result<?> getMyDisputeByOrderId(@PathVariable("orderId") Long orderId) {
+        Long buyerId = StpUtil.getLoginIdAsLong();
+        try {
+            DisputeListItemVO dispute = disputeService.getMyDisputeByOrderId(buyerId, orderId);
+            return Result.success(dispute);
+        } catch (Exception e) {
+            log.error("按订单查询买家争议失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
     @ApiOperation("争议详情")
     @GetMapping("/detail/{id}")
     @SaCheckLogin
@@ -149,4 +163,3 @@ public class DisputeController {
         }
     }
 }
-
