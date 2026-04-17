@@ -240,7 +240,7 @@ const submitResponse = async () => {
     }
     await arbitrationApi.sellerRespondDispute(payload)
     ElMessage.success('响应提交成功')
-    router.push('/dispute/seller/pending')
+    router.push({ path: '/dispute/center', query: { tab: 'seller' } })
   } catch (error) {
     if (error !== 'cancel') ElMessage.error(error?.message || '提交失败')
   } finally {

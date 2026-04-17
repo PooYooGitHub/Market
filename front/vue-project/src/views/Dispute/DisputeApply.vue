@@ -86,7 +86,7 @@
 
         <el-form-item>
           <el-button type="primary" :loading="submitting" @click="submit">提交争议申请</el-button>
-          <el-button @click="$router.push('/dispute/my')">我的争议</el-button>
+          <el-button @click="$router.push({ path: '/dispute/center', query: { tab: 'buyer' } })">我的争议</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -212,7 +212,7 @@ const submit = async () => {
     }
     await arbitrationApi.createDispute(payload)
     ElMessage.success('争议申请已提交，等待卖家协商响应')
-    router.push('/dispute/my')
+    router.push({ path: '/dispute/center', query: { tab: 'buyer' } })
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(error?.message || '提交失败')
@@ -247,4 +247,3 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 </style>
-

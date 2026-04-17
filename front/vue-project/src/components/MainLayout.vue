@@ -7,7 +7,7 @@
           mode="horizontal"
           :ellipsis="false"
           class="nav-menu"
-          :default-active="$route.path"
+          :default-active="activeMenu"
           router
         >
           <el-menu-item index="/">
@@ -44,13 +44,9 @@
               <el-icon><Medal /></el-icon>
               我的信用
             </el-menu-item>
-            <el-menu-item index="/dispute/my">
+            <el-menu-item index="/dispute/center">
               <el-icon><DocumentChecked /></el-icon>
-              争议协商
-            </el-menu-item>
-            <el-menu-item index="/dispute/seller/pending">
-              <el-icon><DocumentChecked /></el-icon>
-              卖家协商
+              争议中心
             </el-menu-item>
           </template>
         </el-menu>
@@ -114,8 +110,8 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useArbitrationStore } from '@/stores/arbitration'
 import { MessageBox } from '@/utils/message'
@@ -135,8 +131,16 @@ import {
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const arbitrationStore = useArbitrationStore()
+
+const activeMenu = computed(() => {
+  if (route.path.startsWith('/dispute')) {
+    return '/dispute/center'
+  }
+  return route.path
+})
 
 // 处理下拉菜单命令
 const handleCommand = async (command) => {

@@ -21,10 +21,9 @@ import ArbitrationList from '@/views/Arbitration/ArbitrationList.vue'
 import ArbitrationDetail from '@/views/Arbitration/ArbitrationDetail.vue'
 import ArbitrationAdmin from '@/views/Arbitration/ArbitrationAdmin.vue'
 import DisputeApply from '@/views/Dispute/DisputeApply.vue'
-import DisputeMyList from '@/views/Dispute/DisputeMyList.vue'
 import DisputeDetail from '@/views/Dispute/DisputeDetail.vue'
-import SellerDisputePending from '@/views/Dispute/SellerDisputePending.vue'
 import SellerDisputeDetail from '@/views/Dispute/SellerDisputeDetail.vue'
+import DisputeCenter from '@/views/Dispute/DisputeCenter.vue'
 import SimpleTest from '@/views/SimpleTest.vue'
 import UserProfile from '@/views/UserProfile.vue'
 
@@ -275,6 +274,15 @@ const routes = [
         }
       },
       {
+        path: 'dispute/center',
+        name: 'DisputeCenter',
+        component: DisputeCenter,
+        meta: {
+          title: '争议中心',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'dispute/apply',
         name: 'DisputeApply',
         component: DisputeApply,
@@ -286,11 +294,13 @@ const routes = [
       {
         path: 'dispute/my',
         name: 'DisputeMyList',
-        component: DisputeMyList,
-        meta: {
-          title: '我的争议',
-          requiresAuth: true
-        }
+        redirect: (to) => ({
+          path: '/dispute/center',
+          query: {
+            ...to.query,
+            tab: 'buyer'
+          }
+        })
       },
       {
         path: 'dispute/detail/:id',
@@ -304,11 +314,13 @@ const routes = [
       {
         path: 'dispute/seller/pending',
         name: 'SellerDisputePending',
-        component: SellerDisputePending,
-        meta: {
-          title: '卖家待响应争议',
-          requiresAuth: true
-        }
+        redirect: (to) => ({
+          path: '/dispute/center',
+          query: {
+            ...to.query,
+            tab: 'seller'
+          }
+        })
       },
       {
         path: 'dispute/seller/detail/:id',
