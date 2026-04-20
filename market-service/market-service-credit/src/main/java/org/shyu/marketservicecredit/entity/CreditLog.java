@@ -1,92 +1,50 @@
 package org.shyu.marketservicecredit.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
 /**
- * 信用分变更日志实体类
- *
- * @author Market Team
- * @since 2026-04-01
+ * Credit score change log.
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("t_credit_log")
 public class CreditLog {
 
-    /**
-     * 主键ID
-     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 用户ID
-     */
     private Long userId;
 
-    /**
-     * 变更类型
-     */
     private String changeType;
 
     /**
-     * 分数变化
+     * Raw score delta before decay.
+     */
+    private Integer rawScoreChange;
+
+    /**
+     * Effective score delta after decay and clamp.
      */
     private Integer scoreChange;
 
-    /**
-     * 变更前分数
-     */
     private Integer beforeScore;
 
-    /**
-     * 变更后分数
-     */
     private Integer afterScore;
 
-    /**
-     * 关联ID（如评价ID、订单ID等）
-     */
     private Long relatedId;
 
-    /**
-     * 变更原因描述
-     */
     private String reason;
 
-    /**
-     * 创建时间
-     */
+    private String eventKey;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
-    /**
-     * 变更类型枚举
-     */
-    public enum ChangeType {
-        EVALUATION("EVALUATION", "评价"),
-        PENALTY("PENALTY", "惩罚"),
-        REWARD("REWARD", "奖励"),
-        INIT("INIT", "初始化");
-
-        private final String code;
-        private final String desc;
-
-        ChangeType(String code, String desc) {
-            this.code = code;
-            this.desc = desc;
-        }
-
-        public String getCode() {
-            return code;
-        }
-
-        public String getDesc() {
-            return desc;
-        }
-    }
 }

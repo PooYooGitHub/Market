@@ -50,12 +50,6 @@
           text-color="#ecf0f1"
           active-text-color="#3498db"
         >
-          <!-- 仪表盘 -->
-          <el-menu-item index="/admin/dashboard">
-            <el-icon><Monitor /></el-icon>
-            <template #title>工作台</template>
-          </el-menu-item>
-
           <!-- 仲裁管理 -->
           <el-sub-menu index="arbitration">
             <template #title>
@@ -75,30 +69,6 @@
               <template #title>已完成</template>
             </el-menu-item>
           </el-sub-menu>
-
-          <!-- 数据统计 -->
-          <el-sub-menu index="statistics">
-            <template #title>
-              <el-icon><DataAnalysis /></el-icon>
-              <span>数据统计</span>
-            </template>
-            <el-menu-item index="/admin/statistics/overview">
-              <el-icon><DataAnalysis /></el-icon>
-              <template #title>总体概览</template>
-            </el-menu-item>
-            <el-menu-item index="/admin/statistics/arbitration">
-              <el-icon><Document /></el-icon>
-              <template #title>仲裁分析</template>
-            </el-menu-item>
-            <el-menu-item index="/admin/statistics/trend">
-              <el-icon><Operation /></el-icon>
-              <template #title>趋势分析</template>
-            </el-menu-item>
-            <el-menu-item index="/admin/statistics/reports">
-              <el-icon><Download /></el-icon>
-              <template #title>报表导出</template>
-            </el-menu-item>
-          </el-sub-menu>
         </el-menu>
       </el-aside>
 
@@ -106,7 +76,7 @@
       <el-main class="admin-main">
         <!-- 面包屑导航 -->
         <el-breadcrumb class="breadcrumb" separator-icon="ArrowRight">
-          <el-breadcrumb-item :to="{ path: '/admin/dashboard' }">首页</el-breadcrumb-item>
+          <el-breadcrumb-item :to="{ path: '/admin/arbitration/pending' }">首页</el-breadcrumb-item>
           <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path" :to="{ path: item.path }">
             {{ item.name }}
           </el-breadcrumb-item>
@@ -150,9 +120,9 @@ import { ElMessage } from 'element-plus'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import {
-  Monitor, DataAnalysis, Bell, ArrowDown, Expand, Fold,
-  Clock, Loading, CircleCheck, Document,
-  Download, User, Management, Operation
+  Bell, ArrowDown, Expand, Fold,
+  Clock, Loading, CircleCheck,
+  User, Management
 } from '@element-plus/icons-vue'
 import { useArbitrationStore } from '@/stores/arbitration'
 
@@ -176,17 +146,12 @@ const breadcrumbs = computed(() => {
 
   const routeNames = {
     'admin': '管理系统',
-    'dashboard': '仪表盘',
     'users': '用户管理',
     'products': '商品管理',
     'arbitration': '仲裁管理',
     'pending': '待处理',
     'processing': '处理中',
-    'completed': '已完成',
-    'statistics': '数据统计',
-    'overview': '概览',
-    'trend': '趋势分析',
-    'reports': '报表导出'
+    'completed': '已完成'
   }
 
   for (let i = 1; i < paths.length; i++) {

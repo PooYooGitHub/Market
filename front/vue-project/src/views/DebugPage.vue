@@ -23,7 +23,7 @@
       <h3>快速访问：</h3>
       <div class="link-grid">
         <router-link to="/admin/login" class="debug-link">管理员登录</router-link>
-        <router-link to="/admin/dashboard" class="debug-link">工作台</router-link>
+        <router-link to="/admin/arbitration/pending" class="debug-link">管理端仲裁页</router-link>
         <router-link to="/user" class="debug-link">用户端</router-link>
         <router-link to="/test" class="debug-link">测试页面</router-link>
       </div>

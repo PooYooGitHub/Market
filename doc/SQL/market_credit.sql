@@ -1,50 +1,56 @@
-/*
- Navicat Premium Dump SQL
-
- Source Server         : mysql
- Source Server Type    : MySQL
- Source Server Version : 80408 (8.4.8)
- Source Host           : localhost:3306
- Source Schema         : market_credit
-
- Target Server Type    : MySQL
- Target Server Version : 80408 (8.4.8)
- File Encoding         : 65001
-
- Date: 10/04/2026 19:17:46
-*/
-
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- ----------------------------
--- Table structure for t_credit_score
--- ----------------------------
-DROP TABLE IF EXISTS `t_credit_score`;
-CREATE TABLE `t_credit_score`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` bigint NOT NULL COMMENT '用户ID',
-  `score` int NULL DEFAULT 100 COMMENT '信用分',
-  `level` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '一般' COMMENT '信用等级',
-  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '信用分表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for t_evaluation
--- ----------------------------
+DROP TABLE IF EXISTS `t_credit_log`;
 DROP TABLE IF EXISTS `t_evaluation`;
-CREATE TABLE `t_evaluation`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `order_id` bigint NOT NULL COMMENT '订单ID',
-  `evaluator_id` bigint NOT NULL COMMENT '评价人ID',
-  `target_id` bigint NOT NULL COMMENT '被评价人ID',
-  `score` tinyint NULL DEFAULT 5 COMMENT '评分 1-5',
-  `content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '评价内容',
-  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '评价时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_target_id`(`target_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '评价表' ROW_FORMAT = Dynamic;
+DROP TABLE IF EXISTS `t_credit_score`;
+
+CREATE TABLE `t_credit_score` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL,
+  `score` int(11) NOT NULL DEFAULT 550,
+  `level` varchar(32) NOT NULL DEFAULT '成长中',
+  `badge_code` varchar(32) NOT NULL DEFAULT 'ROOKIE',
+  `badge_name` varchar(32) NOT NULL DEFAULT '新手认证',
+  `badge_color` varchar(16) NOT NULL DEFAULT '#C0C4CC',
+  `badge_desc` varchar(255) NOT NULL DEFAULT '交易次数较少，建议先小额交易',
+  `high_trust` tinyint(1) NOT NULL DEFAULT 0,
+  `valid_trade_count` int(11) NOT NULL DEFAULT 0,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `t_evaluation` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `order_id` bigint(20) NOT NULL,
+  `evaluator_id` bigint(20) NOT NULL,
+  `target_id` bigint(20) NOT NULL,
+  `score` tinyint(4) NOT NULL,
+  `content` varchar(500) DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_evaluator` (`order_id`, `evaluator_id`),
+  KEY `idx_target_id` (`target_id`),
+  KEY `idx_evaluator_id` (`evaluator_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `t_credit_log` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL,
+  `change_type` varchar(32) NOT NULL,
+  `raw_score_change` int(11) NOT NULL DEFAULT 0,
+  `score_change` int(11) NOT NULL DEFAULT 0,
+  `before_score` int(11) NOT NULL,
+  `after_score` int(11) NOT NULL,
+  `related_id` bigint(20) DEFAULT NULL,
+  `reason` varchar(255) DEFAULT NULL,
+  `event_key` varchar(128) DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_event_key` (`event_key`),
+  KEY `idx_user_time` (`user_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;

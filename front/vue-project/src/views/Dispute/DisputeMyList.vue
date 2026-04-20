@@ -11,19 +11,23 @@
       <el-table :data="list" v-loading="loading">
         <el-table-column prop="id" label="争议ID" width="100" />
         <el-table-column prop="orderId" label="订单ID" width="120" />
-        <el-table-column prop="reason" label="原因" width="160" />
-        <el-table-column prop="requestType" label="诉求类型" width="150" />
+        <el-table-column label="原因" width="160">
+          <template #default="{ row }">{{ getDisputeReasonLabel(row.reason) }}</template>
+        </el-table-column>
+        <el-table-column label="诉求类型" width="150">
+          <template #default="{ row }">{{ getDisputeRequestTypeLabel(row.requestType) }}</template>
+        </el-table-column>
         <el-table-column prop="expectedAmount" label="期望金额" width="130">
           <template #default="{ row }">¥{{ formatAmount(row.expectedAmount) }}</template>
         </el-table-column>
         <el-table-column label="状态" width="180">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ row.statusLabel || row.status }}</el-tag>
+            <el-tag :type="statusType(row.status)">{{ row.statusLabel || getDisputeStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="执行进度" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.finalResultDescription || row.finalExecutionStatus || '-' }}
+            {{ row.finalResultDescription || getExecutionStatusLabel(row.finalExecutionStatus) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
@@ -52,6 +56,12 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { arbitrationApi } from '@/api/arbitration'
+import {
+  getDisputeReasonLabel,
+  getDisputeRequestTypeLabel,
+  getDisputeStatusLabel,
+  getExecutionStatusLabel
+} from '@/utils/disputeEnums'
 
 const router = useRouter()
 const loading = ref(false)

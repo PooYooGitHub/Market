@@ -5,7 +5,7 @@
         <div class="header-row">
           <h3>争议详情 #{{ detail.id }}</h3>
           <div>
-            <el-tag :type="statusType(detail.status)">{{ detail.statusLabel || detail.status }}</el-tag>
+            <el-tag :type="statusType(detail.status)">{{ detail.statusLabel || getDisputeStatusLabel(detail.status) }}</el-tag>
             <el-button style="margin-left: 8px" @click="$router.go(-1)">返回</el-button>
           </div>
         </div>
@@ -14,8 +14,8 @@
       <el-descriptions border :column="2">
         <el-descriptions-item label="订单ID">{{ detail.orderId }}</el-descriptions-item>
         <el-descriptions-item label="商品ID">{{ detail.productId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="争议原因">{{ detail.reason }}</el-descriptions-item>
-        <el-descriptions-item label="诉求类型">{{ detail.requestType }}</el-descriptions-item>
+        <el-descriptions-item label="争议原因">{{ getDisputeReasonLabel(detail.reason) }}</el-descriptions-item>
+        <el-descriptions-item label="诉求类型">{{ getDisputeRequestTypeLabel(detail.requestType) }}</el-descriptions-item>
         <el-descriptions-item label="期望金额">¥{{ formatAmount(detail.expectedAmount) }}</el-descriptions-item>
         <el-descriptions-item label="倒计时">{{ countdownText }}</el-descriptions-item>
         <el-descriptions-item label="事实说明" :span="2">{{ detail.factDescription }}</el-descriptions-item>
@@ -25,9 +25,9 @@
       <el-card v-if="detail.sellerProposal" class="sub-card" shadow="never">
         <template #header><span>卖家协商方案</span></template>
         <el-descriptions border :column="2">
-          <el-descriptions-item label="方案类型">{{ detail.sellerProposal.proposalType || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="方案类型">{{ getSellerProposalTypeLabel(detail.sellerProposal.proposalType) }}</el-descriptions-item>
           <el-descriptions-item label="方案金额">¥{{ formatAmount(detail.sellerProposal.proposalAmount) }}</el-descriptions-item>
-          <el-descriptions-item label="运费承担">{{ detail.sellerProposal.freightBearer || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="运费承担">{{ getFreightBearerLabel(detail.sellerProposal.freightBearer) }}</el-descriptions-item>
           <el-descriptions-item label="方案说明" :span="2">{{ detail.sellerProposal.proposalDescription || '-' }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -39,7 +39,7 @@
             {{ decisionTypeLabel(detail.finalDecisionType) }}
           </el-descriptions-item>
           <el-descriptions-item label="执行状态">
-            {{ detail.executionStatusLabel || detail.finalExecutionStatus || '-' }}
+            {{ detail.executionStatusLabel || getExecutionStatusLabel(detail.finalExecutionStatus) }}
           </el-descriptions-item>
           <el-descriptions-item label="结果说明">
             {{ detail.finalResultDescription || detail.executionRemark || '-' }}
@@ -97,6 +97,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { arbitrationApi } from '@/api/arbitration'
+import {
+  getDisputeReasonLabel,
+  getDisputeRequestTypeLabel,
+  getDisputeStatusLabel,
+  getSellerProposalTypeLabel,
+  getFreightBearerLabel,
+  getExecutionStatusLabel
+} from '@/utils/disputeEnums'
 
 const route = useRoute()
 const loading = ref(false)

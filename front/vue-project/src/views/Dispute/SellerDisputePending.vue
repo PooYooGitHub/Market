@@ -22,10 +22,12 @@
       <el-table :data="list" v-loading="loading">
         <el-table-column prop="id" label="争议ID" width="100" />
         <el-table-column prop="orderId" label="订单ID" width="120" />
-        <el-table-column prop="reason" label="争议原因" width="180" show-overflow-tooltip />
+        <el-table-column label="争议原因" width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ getDisputeReasonLabel(row.reason) }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="180">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ row.statusLabel || row.status }}</el-tag>
+            <el-tag :type="statusTagType(row.status)">{{ row.statusLabel || getDisputeStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="截止时间" width="180">
@@ -59,6 +61,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { arbitrationApi } from '@/api/arbitration'
+import { getDisputeReasonLabel, getDisputeStatusLabel } from '@/utils/disputeEnums'
 
 const router = useRouter()
 const loading = ref(false)

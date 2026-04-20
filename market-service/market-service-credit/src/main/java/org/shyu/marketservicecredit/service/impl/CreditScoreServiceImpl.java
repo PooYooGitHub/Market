@@ -5,19 +5,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.shyu.marketcommon.exception.BusinessException;
-import org.shyu.marketservicecredit.entity.CreditScore;
+import org.springframework.util.StringUtils;
 import org.shyu.marketapicredit.enums.CreditLevel;
+import org.shyu.marketapicredit.vo.CreditVO;
+import org.shyu.marketcommon.exception.BusinessException;
+import org.shyu.marketservicecredit.constant.CreditPolicy;
+import org.shyu.marketservicecredit.entity.CreditLog;
+import org.shyu.marketservicecredit.entity.CreditScore;
+import org.shyu.marketservicecredit.enums.CreditEventType;
+import org.shyu.marketservicecredit.mapper.CreditLogMapper;
 import org.shyu.marketservicecredit.mapper.CreditScoreMapper;
 import org.shyu.marketservicecredit.mapper.EvaluationMapper;
 import org.shyu.marketservicecredit.service.CreditScoreService;
-import org.shyu.marketapicredit.vo.CreditVO;
 
 /**
- * 信用分服务实现类
- *
- * @author Market Team
- * @since 2026-04-01
+ * Credit score service implementation.
  */
 @Slf4j
 @Service
@@ -25,6 +27,7 @@ import org.shyu.marketapicredit.vo.CreditVO;
 public class CreditScoreServiceImpl extends ServiceImpl<CreditScoreMapper, CreditScore> implements CreditScoreService {
 
     private final EvaluationMapper evaluationMapper;
+    private final CreditLogMapper creditLogMapper;
 
     @Override
     public CreditVO getUserCredit(Long userId) {
@@ -32,32 +35,43 @@ public class CreditScoreServiceImpl extends ServiceImpl<CreditScoreMapper, Credi
             throw new BusinessException("用户ID不能为空");
         }
 
-        // 获取信用分记录，如果没有则初始化
         CreditScore creditScore = baseMapper.getByUserId(userId);
         if (creditScore == null) {
             initUserCredit(userId);
             creditScore = baseMapper.getByUserId(userId);
         }
 
-        // 构建返回对象
+        if (creditScore == null) {
+            throw new BusinessException("信用信息初始化失败");
+        }
+
+        boolean needRefresh = ensureProfileData(creditScore);
+        if (needRefresh) {
+            updateById(creditScore);
+        }
+
         CreditVO creditVO = new CreditVO();
         creditVO.setUserId(userId);
         creditVO.setScoreAndLevel(creditScore.getScore());
+        creditVO.setBadgeCode(creditScore.getBadgeCode());
+        creditVO.setBadgeName(creditScore.getBadgeName());
+        creditVO.setBadgeColor(creditScore.getBadgeColor());
+        creditVO.setBadgeDesc(creditScore.getBadgeDesc());
+        creditVO.setHighTrust(creditScore.getHighTrust() != null && creditScore.getHighTrust() == 1);
+        creditVO.setValidTradeCount(safeInt(creditScore.getValidTradeCount()));
 
-        // 统计评价信息
         Long totalEvaluations = evaluationMapper.getTotalCount(userId);
         Long goodCount = evaluationMapper.getGoodCount(userId);
         Double avgScore = evaluationMapper.getAvgScore(userId);
 
-        creditVO.setTotalEvaluations(totalEvaluations);
-        creditVO.setAvgScore(avgScore != null ? Math.round(avgScore * 100.0) / 100.0 : 0.0);
+        creditVO.setTotalEvaluations(totalEvaluations == null ? 0L : totalEvaluations);
+        creditVO.setAvgScore(avgScore != null ? round2(avgScore) : 0.0D);
 
-        // 计算好评率
-        if (totalEvaluations > 0) {
-            double goodRate = (goodCount.doubleValue() / totalEvaluations.doubleValue()) * 100;
-            creditVO.setGoodRate(Math.round(goodRate * 100.0) / 100.0);
+        if (totalEvaluations != null && totalEvaluations > 0) {
+            double goodRate = (goodCount.doubleValue() / totalEvaluations.doubleValue()) * 100D;
+            creditVO.setGoodRate(round2(goodRate));
         } else {
-            creditVO.setGoodRate(0.0);
+            creditVO.setGoodRate(0.0D);
         }
 
         return creditVO;
@@ -70,42 +84,19 @@ public class CreditScoreServiceImpl extends ServiceImpl<CreditScoreMapper, Credi
             throw new BusinessException("用户ID不能为空");
         }
 
-        try {
-            baseMapper.initUserCredit(userId);
-            log.info("初始化用户信用分成功，用户ID: {}", userId);
-        } catch (Exception e) {
-            log.error("初始化用户信用分失败，用户ID: {}", userId, e);
-        }
+        baseMapper.initUserCredit(userId);
+        log.info("init credit score, userId={}", userId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUserCredit(Long userId, Integer scoreChange) {
-        if (userId == null || scoreChange == null) {
-            return;
-        }
-
-        CreditScore creditScore = baseMapper.getByUserId(userId);
-        if (creditScore == null) {
-            initUserCredit(userId);
-            creditScore = baseMapper.getByUserId(userId);
-        }
-
-        // 计算新分数
-        Integer newScore = creditScore.getScore() + scoreChange;
-
-        // 限制分数范围在0-100之间
-        newScore = Math.max(0, Math.min(100, newScore));
-
-        // 更新信用分和等级
-        creditScore.setScore(newScore);
-        CreditLevel level = CreditLevel.getByScore(newScore);
-        creditScore.setLevel(level.getName());
-
-        updateById(creditScore);
-
-        log.info("更新用户信用分成功，用户ID: {}, 分数变化: {}, 当前分数: {}, 等级: {}",
-                userId, scoreChange, newScore, level.getName());
+        applyCreditEvent(userId,
+                CreditEventType.MANUAL_ADJUST,
+                scoreChange,
+                null,
+                "manual credit update",
+                null);
     }
 
     @Override
@@ -115,40 +106,168 @@ public class CreditScoreServiceImpl extends ServiceImpl<CreditScoreMapper, Credi
             return;
         }
 
-        // 基础分数设为80分（中位数）
-        int baseScore = 80;
+        CreditScore creditScore = lockAndLoadCredit(userId);
+        int validTradeCount = safeInt(creditScore.getValidTradeCount());
 
-        // 获取用户的评价统计
+        int recalculated = CreditPolicy.INITIAL_SCORE;
+        recalculated += Math.min(120, validTradeCount * 3);
+
         Long totalCount = evaluationMapper.getTotalCount(userId);
         Double avgScore = evaluationMapper.getAvgScore(userId);
-
-        if (totalCount > 0 && avgScore != null) {
-            // 根据平均评分调整信用分，调整幅度更小
-            // 5分: +20, 4分: +10, 3分: 0, 2分: -10, 1分: -20
-            int scoreAdjustment = (int) ((avgScore - 3) * 10);
-
-            // 根据评价数量给予额外加分，但更保守（最多+10分）
-            int countBonus = Math.min(10, totalCount.intValue());
-
-            baseScore += scoreAdjustment + countBonus;
+        if (totalCount != null && totalCount > 0 && avgScore != null) {
+            recalculated += (int) Math.round((avgScore - 3D) * 20D);
+            recalculated += Math.min(40, totalCount.intValue());
         }
 
-        // 更新信用分
-        CreditScore creditScore = baseMapper.getByUserId(userId);
-        if (creditScore == null) {
-            initUserCredit(userId);
-            creditScore = baseMapper.getByUserId(userId);
+        recalculated = CreditPolicy.normalizeScore(recalculated);
+        refreshCreditProfile(creditScore, recalculated);
+
+        updateById(creditScore);
+        log.info("recalculate user credit, userId={}, score={}", userId, recalculated);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applyCreditEvent(Long userId,
+                                 CreditEventType eventType,
+                                 Integer rawScoreChange,
+                                 Long relatedId,
+                                 String reason,
+                                 String eventKey) {
+        if (userId == null || eventType == null) {
+            throw new BusinessException("信用事件参数不完整");
         }
 
-        // 限制分数范围
-        baseScore = Math.max(0, Math.min(100, baseScore));
+        CreditScore creditScore = lockAndLoadCredit(userId);
 
-        creditScore.setScore(baseScore);
-        CreditLevel level = CreditLevel.getByScore(baseScore);
-        creditScore.setLevel(level.getName());
+        if (StringUtils.hasText(eventKey) && creditLogMapper.countByEventKey(eventKey) > 0) {
+            log.info("skip duplicated credit event, userId={}, eventKey={}", userId, eventKey);
+            return;
+        }
+
+        int rawDelta = rawScoreChange == null ? 0 : rawScoreChange;
+        int beforeScore = CreditPolicy.normalizeScore(safeScore(creditScore.getScore()));
+        int effectiveDelta = CreditPolicy.calculateEffectiveChange(beforeScore, rawDelta);
+        int afterScore = CreditPolicy.normalizeScore(beforeScore + effectiveDelta);
+
+        refreshCreditProfile(creditScore, afterScore);
+
+        if (CreditEventType.TRADE_COMPLETED == eventType && rawDelta > 0) {
+            creditScore.setValidTradeCount(safeInt(creditScore.getValidTradeCount()) + 1);
+        }
 
         updateById(creditScore);
 
-        log.info("重新计算用户信用分完成，用户ID: {}, 新分数: {}, 等级: {}", userId, baseScore, level.getName());
+        CreditLog creditLog = new CreditLog();
+        creditLog.setUserId(userId);
+        creditLog.setChangeType(eventType.getCode());
+        creditLog.setRawScoreChange(rawDelta);
+        creditLog.setScoreChange(effectiveDelta);
+        creditLog.setBeforeScore(beforeScore);
+        creditLog.setAfterScore(afterScore);
+        creditLog.setRelatedId(relatedId);
+        creditLog.setReason(StringUtils.hasText(reason) ? reason : eventType.getDescription());
+        creditLog.setEventKey(StringUtils.hasText(eventKey) ? eventKey : null);
+        creditLogMapper.insert(creditLog);
+
+        log.info("credit event applied, userId={}, event={}, rawDelta={}, effectiveDelta={}, before={}, after={}, eventKey={}",
+                userId, eventType.getCode(), rawDelta, effectiveDelta, beforeScore, afterScore, eventKey);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void handleTradeCompleted(Long orderId, Long buyerId, Long sellerId) {
+        if (orderId == null || buyerId == null || sellerId == null) {
+            throw new BusinessException("交易完成事件参数不完整");
+        }
+
+        applyCreditEvent(buyerId,
+                CreditEventType.TRADE_COMPLETED,
+                CreditPolicy.TRADE_COMPLETE_SCORE,
+                orderId,
+                "valid trade completed",
+                buildEventKey(CreditEventType.TRADE_COMPLETED, orderId, buyerId));
+
+        applyCreditEvent(sellerId,
+                CreditEventType.TRADE_COMPLETED,
+                CreditPolicy.TRADE_COMPLETE_SCORE,
+                orderId,
+                "valid trade completed",
+                buildEventKey(CreditEventType.TRADE_COMPLETED, orderId, sellerId));
+    }
+
+    private CreditScore lockAndLoadCredit(Long userId) {
+        CreditScore creditScore = baseMapper.getByUserIdForUpdate(userId);
+        if (creditScore == null) {
+            baseMapper.initUserCredit(userId);
+            creditScore = baseMapper.getByUserIdForUpdate(userId);
+        }
+
+        if (creditScore == null) {
+            throw new BusinessException("信用记录初始化失败");
+        }
+
+        ensureProfileData(creditScore);
+        return creditScore;
+    }
+
+    private boolean ensureProfileData(CreditScore creditScore) {
+        boolean needRefresh = false;
+
+        if (creditScore.getScore() == null) {
+            creditScore.setScore(CreditPolicy.INITIAL_SCORE);
+            needRefresh = true;
+        }
+
+        if (creditScore.getValidTradeCount() == null) {
+            creditScore.setValidTradeCount(0);
+            needRefresh = true;
+        }
+
+        if (!StringUtils.hasText(creditScore.getLevel())
+                || !StringUtils.hasText(creditScore.getBadgeCode())
+                || !StringUtils.hasText(creditScore.getBadgeName())
+                || !StringUtils.hasText(creditScore.getBadgeColor())
+                || !StringUtils.hasText(creditScore.getBadgeDesc())
+                || creditScore.getHighTrust() == null) {
+            refreshCreditProfile(creditScore, safeScore(creditScore.getScore()));
+            needRefresh = true;
+        }
+
+        return needRefresh;
+    }
+
+    private void refreshCreditProfile(CreditScore creditScore, int score) {
+        int normalized = CreditPolicy.normalizeScore(score);
+        CreditLevel level = CreditPolicy.resolveLevel(normalized);
+        CreditPolicy.BadgeProfile badgeProfile = CreditPolicy.resolveBadge(normalized);
+
+        creditScore.setScore(normalized);
+        creditScore.setLevel(level.getName());
+        creditScore.setBadgeCode(badgeProfile.getCode());
+        creditScore.setBadgeName(badgeProfile.getName());
+        creditScore.setBadgeColor(badgeProfile.getColor());
+        creditScore.setBadgeDesc(badgeProfile.getDesc());
+        creditScore.setHighTrust(CreditPolicy.isHighTrust(normalized) ? 1 : 0);
+
+        if (creditScore.getValidTradeCount() == null) {
+            creditScore.setValidTradeCount(0);
+        }
+    }
+
+    private String buildEventKey(CreditEventType eventType, Long relatedId, Long userId) {
+        return eventType.getCode() + ":" + relatedId + ":" + userId;
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private int safeScore(Integer score) {
+        return score == null ? CreditPolicy.INITIAL_SCORE : score;
+    }
+
+    private double round2(double value) {
+        return Math.round(value * 100.0D) / 100.0D;
     }
 }

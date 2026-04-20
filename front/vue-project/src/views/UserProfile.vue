@@ -42,9 +42,9 @@
             </div>
             <div class="level-info">
               <div class="credit-level" :style="{ backgroundColor: creditInfo.levelColor }">
-                {{ creditInfo.level }}
+                {{ creditInfo.badgeName || creditInfo.level }}
               </div>
-              <div class="level-desc">{{ getLevelDescription(creditInfo.level) }}</div>
+              <div class="level-desc">{{ creditInfo.badgeDesc || getLevelDescription(creditInfo.level) }}</div>
             </div>
           </div>
           <div class="credit-stats">
@@ -195,11 +195,11 @@ const loadMoreEvaluations = async () => {
 // 获取等级描述
 const getLevelDescription = (level) => {
   const descriptions = {
-    '钻石': '信用极佳，值得信赖',
-    '黄金': '信用良好，交易可靠',
-    '白银': '信用一般，需要谨慎',
-    '青铜': '信用较差，建议小心',
-    '新手': '新用户，暂无信用记录'
+    '优秀': '信誉优秀，值得信赖',
+    '良好': '信誉良好，可放心交易',
+    '稳定': '信誉稳定，持续成长中',
+    '成长中': '信用成长中，建议先小额交易',
+    '新手': '新用户，建议先小额交易'
   }
   return descriptions[level] || '暂无信用记录'
 }

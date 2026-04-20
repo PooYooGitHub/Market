@@ -30,7 +30,6 @@ import UserProfile from '@/views/UserProfile.vue'
 // 绠＄悊绯荤粺鐩稿叧瀵煎叆
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import AdminLogin from '@/views/Admin/Login.vue'
-import AdminDashboard from '@/views/Admin/Dashboard.vue'
 
 import DebugPage from '@/views/DebugPage.vue'
 import RouteTest from '@/views/RouteTest.vue'
@@ -364,16 +363,7 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/admin/dashboard'
-      },
-      // 仪表盘
-      {
-        path: 'dashboard',
-        name: 'AdminDashboard',
-        component: AdminDashboard,
-        meta: {
-          title: '工作台'
-        }
+        redirect: '/admin/arbitration/pending'
       },
       // 浠茶绠＄悊璺敱
       {
@@ -407,39 +397,6 @@ const routes = [
         meta: {
           title: '已完成仲裁'
         }
-      },
-      // 鏁版嵁缁熻璺敱
-      {
-        path: 'statistics/overview',
-        name: 'StatisticsOverview',
-        component: () => import('@/views/Admin/Statistics/Overview.vue'),
-        meta: {
-          title: '数据概览'
-        }
-      },
-      {
-        path: 'statistics/arbitration',
-        name: 'StatisticsArbitration',
-        component: () => import('@/views/Admin/Statistics/ArbitrationStats.vue'),
-        meta: {
-          title: '仲裁统计'
-        }
-      },
-      {
-        path: 'statistics/trend',
-        name: 'StatisticsTrend',
-        component: () => import('@/views/Admin/Statistics/TrendAnalysis.vue'),
-        meta: {
-          title: '趋势分析'
-        }
-      },
-      {
-        path: 'statistics/reports',
-        name: 'StatisticsReports',
-        component: () => import('@/views/Admin/Statistics/Reports.vue'),
-        meta: {
-          title: '报表导出'
-        }
       }
     ]
   }
@@ -468,7 +425,7 @@ router.beforeEach((to, from, next) => {
     if (to.path === '/admin/login') {
       const adminToken = localStorage.getItem('adminToken')
       if (adminToken) {
-        next('/admin/dashboard')
+        next('/admin/arbitration/pending')
         return
       }
       next()
@@ -488,7 +445,7 @@ router.beforeEach((to, from, next) => {
       const userRole = localStorage.getItem('userRole')
       if (userRole !== to.meta.requiresRole) {
         alert('权限不足')
-        next('/admin/dashboard')
+        next('/admin/arbitration/pending')
         return
       }
     }

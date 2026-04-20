@@ -209,13 +209,13 @@ const handleLogin = async () => {
 
         ElMessage.success('管理员登录成功')
 
-        // 跳转到管理后台
+        // 跳转到仲裁管理页
         try {
-          await router.push('/admin/dashboard')
-          console.log('成功跳转到管理后台')
+          await router.push('/admin/arbitration/pending')
+          console.log('成功跳转到仲裁管理页')
         } catch (err) {
           console.error('路由跳转失败:', err)
-          window.location.replace('/admin/dashboard')
+          window.location.replace('/admin/arbitration/pending')
         }
       } else {
         ElMessage.error('当前账号没有管理员权限')
@@ -245,10 +245,10 @@ onMounted(() => {
   // 如果已经登录，直接跳转
   const adminToken = localStorage.getItem('adminToken')
   if (adminToken) {
-    console.log('检测到管理员token，跳转到工作台')
-    router.push('/admin/dashboard').catch(err => {
+    console.log('检测到管理员token，跳转到仲裁管理页')
+    router.push('/admin/arbitration/pending').catch(err => {
       console.error('初始化跳转失败:', err)
-      window.location.replace('/admin/dashboard')
+      window.location.replace('/admin/arbitration/pending')
     })
   }
 })

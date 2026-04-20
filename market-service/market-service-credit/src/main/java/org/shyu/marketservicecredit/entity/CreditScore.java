@@ -1,46 +1,47 @@
 package org.shyu.marketservicecredit.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
 /**
- * 信用分实体类
- *
- * @author Market Team
- * @since 2026-04-01
+ * User credit aggregate.
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("t_credit_score")
 public class CreditScore {
 
-    /**
-     * 主键ID
-     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 用户ID
-     */
     private Long userId;
 
-    /**
-     * 信用分
-     */
     private Integer score;
 
-    /**
-     * 信用等级
-     */
     private String level;
 
-    /**
-     * 更新时间
-     */
+    private String badgeCode;
+
+    private String badgeName;
+
+    private String badgeColor;
+
+    private String badgeDesc;
+
+    private Integer highTrust;
+
+    private Integer validTradeCount;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

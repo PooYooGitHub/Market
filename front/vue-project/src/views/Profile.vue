@@ -45,7 +45,7 @@
               <div class="credit-score" :style="{ color: creditInfo.levelColor }">
                 {{ creditInfo.score }}
               </div>
-              <div class="credit-level">{{ creditInfo.level }}</div>
+              <div class="credit-level">{{ creditInfo.badgeName || creditInfo.level }}</div>
             </div>
             <div class="credit-stats">
               <div class="stat-item">
@@ -55,10 +55,6 @@
               <div class="stat-item">
                 <span class="stat-label">好评率</span>
                 <span class="stat-value">{{ creditInfo.goodRate }}%</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">平均分</span>
-                <span class="stat-value">{{ creditInfo.avgScore }}</span>
               </div>
             </div>
           </div>

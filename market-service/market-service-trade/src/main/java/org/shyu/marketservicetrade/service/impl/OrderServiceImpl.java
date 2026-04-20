@@ -223,26 +223,20 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 确认收货完成，商品已经在支付时设置为已售出(status=2)，这里不需要重复设置
 
         // 订单完成后初始化买卖双方的信用分（如果还没有的话）
-        initCreditScore(order.getBuyerId(), order.getSellerId(), orderId);
+        notifyTradeCompleted(order.getBuyerId(), order.getSellerId(), orderId);
     }
 
     /**
      * 初始化用户信用分
      * 订单完成时自动为买卖双方初始化信用分，便于后续评价
      */
-    private void initCreditScore(Long buyerId, Long sellerId, Long orderId) {
+    private void notifyTradeCompleted(Long buyerId, Long sellerId, Long orderId) {
         try {
-            // 异步初始化买家信用分
-            creditFeignClient.initUserCredit(buyerId);
-            log.info("初始化买家信用分，userId: {}, orderId: {}", buyerId, orderId);
-
-            // 异步初始化卖家信用分
-            creditFeignClient.initUserCredit(sellerId);
-            log.info("初始化卖家信用分，userId: {}, orderId: {}", sellerId, orderId);
+            creditFeignClient.onTradeCompleted(orderId, buyerId, sellerId);
+            log.info("trade completed credit event sent, buyerId={}, sellerId={}, orderId={}", buyerId, sellerId, orderId);
 
         } catch (Exception e) {
-            // 信用分初始化失败不影响订单完成，只记录日志
-            log.warn("初始化信用分失败，buyerId: {}, sellerId: {}, orderId: {}", buyerId, sellerId, orderId, e);
+            log.warn("trade completed credit event failed, buyerId={}, sellerId={}, orderId={}", buyerId, sellerId, orderId, e);
         }
     }
 

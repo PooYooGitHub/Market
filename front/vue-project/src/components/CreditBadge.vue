@@ -2,17 +2,17 @@
   <div class="credit-badge" :class="{ compact: compact }">
     <div v-if="!compact" class="credit-full">
       <div class="credit-icon">
-        <el-icon :color="levelColor" size="20">
-          <Medal v-if="level === '优秀'" />
-          <Trophy v-else-if="level === '良好'" />
-          <Star v-else-if="level === '一般'" />
-          <Warning v-else-if="level === '较差'" />
+        <el-icon :color="displayColor" size="20">
+          <Medal v-if="iconType === 'medal'" />
+          <Trophy v-else-if="iconType === 'trophy'" />
+          <Star v-else-if="iconType === 'star'" />
+          <Warning v-else-if="iconType === 'warning'" />
           <Close v-else />
         </el-icon>
       </div>
       <div class="credit-info">
-        <div class="credit-score" :style="{ color: levelColor }">{{ score }}</div>
-        <div class="credit-level">{{ level }}</div>
+        <div class="credit-score" :style="{ color: displayColor }">{{ score }}</div>
+        <div class="credit-level">{{ displayLabel }}</div>
       </div>
       <div v-if="showTooltip" class="credit-tooltip">
         <el-tooltip :content="tooltipContent" placement="top">
@@ -22,20 +22,20 @@
     </div>
     <div v-else class="credit-compact">
       <el-tag
-        :color="levelColor"
-        :type="getTagType(level)"
+        :color="displayColor"
+        :type="tagType"
         size="small"
         round
         class="credit-tag"
       >
         <el-icon size="14">
-          <Medal v-if="level === '优秀'" />
-          <Trophy v-else-if="level === '良好'" />
-          <Star v-else-if="level === '一般'" />
-          <Warning v-else-if="level === '较差'" />
+          <Medal v-if="iconType === 'medal'" />
+          <Trophy v-else-if="iconType === 'trophy'" />
+          <Star v-else-if="iconType === 'star'" />
+          <Warning v-else-if="iconType === 'warning'" />
           <Close v-else />
         </el-icon>
-        {{ compact ? level : `${score} ${level}` }}
+        {{ compact ? displayLabel : `${score} ${displayLabel}` }}
       </el-tag>
     </div>
   </div>
@@ -45,7 +45,6 @@
 import { computed } from 'vue'
 import { Medal, Trophy, Star, Warning, Close, InfoFilled } from '@element-plus/icons-vue'
 
-// Props
 const props = defineProps({
   score: {
     type: Number,
@@ -53,11 +52,23 @@ const props = defineProps({
   },
   level: {
     type: String,
-    default: '一般'
+    default: '成长中'
   },
   levelColor: {
     type: String,
     default: '#E6A23C'
+  },
+  badgeName: {
+    type: String,
+    default: ''
+  },
+  badgeDesc: {
+    type: String,
+    default: ''
+  },
+  badgeColor: {
+    type: String,
+    default: ''
   },
   compact: {
     type: Boolean,
@@ -69,28 +80,56 @@ const props = defineProps({
   }
 })
 
-// 计算属性
+const displayLabel = computed(() => props.badgeName || props.level || '成长中')
+const displayColor = computed(() => props.badgeColor || props.levelColor || '#E6A23C')
+
 const tooltipContent = computed(() => {
+  if (props.badgeDesc) {
+    return props.badgeDesc
+  }
   const tips = {
     '优秀': '信用优秀，值得信赖的交易伙伴',
     '良好': '信用良好，可以放心交易',
-    '一般': '信用一般，建议谨慎交易',
-    '较差': '信用较差，交易时请多加注意',
-    '很差': '信用很差，交易存在风险'
+    '稳定': '信用稳定，持续成长中',
+    '成长中': '信用成长中，建议先小额交易',
+    '新手': '新用户，建议先小额交易'
   }
   return tips[props.level] || '请保持诚信交易'
 })
 
-const getTagType = (level) => {
-  const typeMap = {
-    '优秀': 'success',
-    '良好': 'primary',
-    '一般': 'warning',
-    '较差': 'danger',
-    '很差': 'info'
+const iconType = computed(() => {
+  const label = displayLabel.value
+  if (label.includes('钻石') || label.includes('金牌') || label.includes('优秀')) {
+    return 'medal'
   }
-  return typeMap[level] || 'warning'
-}
+  if (label.includes('银牌') || label.includes('良好')) {
+    return 'trophy'
+  }
+  if (label.includes('铜牌') || label.includes('稳定')) {
+    return 'star'
+  }
+  if (label.includes('成长')) {
+    return 'warning'
+  }
+  return 'close'
+})
+
+const tagType = computed(() => {
+  const label = displayLabel.value
+  if (label.includes('钻石') || label.includes('金牌') || label.includes('优秀')) {
+    return 'success'
+  }
+  if (label.includes('银牌') || label.includes('良好')) {
+    return 'primary'
+  }
+  if (label.includes('铜牌') || label.includes('稳定')) {
+    return 'warning'
+  }
+  if (label.includes('成长') || label.includes('新手')) {
+    return 'info'
+  }
+  return 'info'
+})
 </script>
 
 <style scoped>
@@ -170,7 +209,6 @@ const getTagType = (level) => {
   font-size: 12px;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .credit-full {
     padding: 10px 12px;

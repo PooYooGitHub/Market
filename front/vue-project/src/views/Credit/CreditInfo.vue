@@ -9,7 +9,6 @@
 
       <div class="credit-content" v-loading="loading">
         <div v-if="creditInfo" class="credit-display">
-          <!-- 信用分数展示 -->
           <div class="score-section">
             <div class="score-circle">
               <div class="score-value" :style="{ color: creditInfo.levelColor }">
@@ -19,37 +18,31 @@
             </div>
             <div class="level-info">
               <el-tag :color="creditInfo.levelColor" class="level-tag" size="large">
-                {{ creditInfo.level }}
+                {{ creditInfo.badgeName || creditInfo.level }}
               </el-tag>
-              <div class="level-desc">{{ getLevelDescription(creditInfo.level) }}</div>
+              <div class="level-desc">
+                {{ creditInfo.badgeDesc || getLevelDescription(creditInfo.level) }}
+              </div>
             </div>
           </div>
 
-          <!-- 统计信息 -->
           <div class="stats-section">
             <el-row :gutter="20">
-              <el-col :span="8">
+              <el-col :span="12">
                 <div class="stat-item">
                   <div class="stat-value">{{ creditInfo.totalEvaluations }}</div>
                   <div class="stat-label">总评价数</div>
                 </div>
               </el-col>
-              <el-col :span="8">
+              <el-col :span="12">
                 <div class="stat-item">
                   <div class="stat-value">{{ creditInfo.goodRate }}%</div>
                   <div class="stat-label">好评率</div>
                 </div>
               </el-col>
-              <el-col :span="8">
-                <div class="stat-item">
-                  <div class="stat-value">{{ creditInfo.avgScore }}</div>
-                  <div class="stat-label">平均评分</div>
-                </div>
-              </el-col>
             </el-row>
           </div>
 
-          <!-- 信用等级说明 -->
           <div class="level-guide">
             <h4>信用等级说明</h4>
             <div class="level-list">
@@ -64,7 +57,6 @@
       </div>
     </el-card>
 
-    <!-- 评价历史 -->
     <el-card class="evaluation-card" shadow="hover" style="margin-top: 20px;">
       <template #header>
         <div class="card-header">
@@ -122,7 +114,6 @@ import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { ElMessage } from 'element-plus'
 
-// 响应式数据
 const loading = ref(false)
 const evaluationLoading = ref(false)
 const creditInfo = ref(null)
@@ -132,16 +123,14 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 信用等级指南
 const levelGuide = ref([
-  { name: '优秀', range: '90-100分', color: '#67C23A', description: '信誉极佳，值得信赖' },
-  { name: '良好', range: '80-89分', color: '#409EFF', description: '信誉良好，表现不错' },
-  { name: '一般', range: '60-79分', color: '#E6A23C', description: '信誉一般，需要提升' },
-  { name: '较差', range: '40-59分', color: '#F56C6C', description: '信誉较差，请注意改善' },
-  { name: '很差', range: '0-39分', color: '#909399', description: '信誉很差，存在风险' }
+  { name: '钻石信誉', range: '900-950', color: '#67C23A', description: '长期稳定高信用用户' },
+  { name: '金牌信誉', range: '850-899', color: '#E6A23C', description: '高可信交易伙伴' },
+  { name: '银牌信誉', range: '750-849', color: '#909399', description: '信用良好，可以放心交易' },
+  { name: '铜牌信誉', range: '650-749', color: '#B88230', description: '信用稳定，持续成长中' },
+  { name: '新手认证', range: '350-649', color: '#C0C4CC', description: '交易次数较少，建议先小额交易' }
 ])
 
-// 加载用户信用信息
 const loadCreditInfo = async () => {
   loading.value = true
   try {
@@ -157,7 +146,6 @@ const loadCreditInfo = async () => {
   }
 }
 
-// 加载评价记录
 const loadEvaluations = async () => {
   evaluationLoading.value = true
   try {
@@ -178,44 +166,33 @@ const loadEvaluations = async () => {
   }
 }
 
-// 获取等级描述
 const getLevelDescription = (level) => {
   const levelMap = {
-    '优秀': '您的信誉非常好，继续保持！',
-    '良好': '您的信誉不错，再接再厉！',
-    '一般': '您的信誉有待提升，请诚信交易',
-    '较差': '您的信誉需要改善，请注意交易行为',
-    '很差': '您的信誉存在问题，请尽快改善'
+    '优秀': '信誉优秀，值得信赖',
+    '良好': '信誉良好，可以放心交易',
+    '稳定': '信誉稳定，持续成长中',
+    '成长中': '信用成长中，建议先小额交易',
+    '新手': '新用户，建议先小额交易'
   }
   return levelMap[level] || '请保持诚信交易'
 }
 
-// 获取头像
 const getAvatar = (evaluation) => {
   return evaluationType.value === 'received'
     ? evaluation.evaluatorAvatar
     : evaluation.targetAvatar
 }
 
-// 获取用户名
 const getUsername = (evaluation) => {
   return evaluationType.value === 'received'
     ? evaluation.evaluatorName || evaluation.evaluatorNickname || '匿名用户'
     : evaluation.targetName || evaluation.targetNickname || '匿名用户'
 }
 
-// 格式化时间
 const formatTime = (time) => {
   return formatDistanceToNow(new Date(time), { addSuffix: true, locale: zhCN })
 }
 
-// 切换评价类型
-const changeEvaluationType = () => {
-  currentPage.value = 1
-  loadEvaluations()
-}
-
-// 页面挂载时加载数据
 onMounted(() => {
   loadCreditInfo()
   loadEvaluations()
@@ -353,11 +330,6 @@ onMounted(() => {
   font-size: 14px;
   color: #666;
   min-width: 80px;
-}
-
-.level-desc {
-  font-size: 14px;
-  color: #999;
 }
 
 .evaluation-list {
