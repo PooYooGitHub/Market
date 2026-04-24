@@ -9,10 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.shyu.marketapicredit.feign.CreditFeignClient;
 import org.shyu.marketapiproduct.dto.ProductDTO;
 import org.shyu.marketapiproduct.feign.ProductFeignClient;
+import org.shyu.marketapiuser.dto.UserAddressDTO;
 import org.shyu.marketapiuser.dto.UserDTO;
+import org.shyu.marketapiuser.feign.UserAddressFeignClient;
 import org.shyu.marketapiuser.feign.UserFeignClient;
 import org.shyu.marketcommon.exception.BusinessException;
 import org.shyu.marketcommon.model.PageResult;
+import org.shyu.marketcommon.result.Result;
 import org.shyu.marketservicetrade.dto.CreateOrderRequest;
 import org.shyu.marketservicetrade.dto.OrderQueryRequest;
 import org.shyu.marketservicetrade.dto.OrderRefundRequest;
@@ -50,6 +53,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final OrderLogService orderLogService;
     private final ProductFeignClient productFeignClient;
     private final UserFeignClient userFeignClient;
+    private final UserAddressFeignClient userAddressFeignClient;
     private final CreditFeignClient creditFeignClient;
     private final CartService cartService;
 
@@ -62,7 +66,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException("商品不存在");
         }
 
-        // 2. 检查商品状态（1=已发布可购买，2=已售出，3=锁定中）
+        // 2. 查询并校验收货地址（传了 addressId 则校验归属；未传则取默认地址）
+        UserAddressDTO address = resolveOrderAddress(userId, request.getAddressId());
+
+        // 3. 检查商品状态（1=已发布可购买，2=已售出，3=锁定中）
         if (product.getStatus() != 1) {
             if (product.getStatus() == 2) {
                 throw new BusinessException("商品已售出");
@@ -73,27 +80,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
         }
 
-        // 3. 不能购买自己的商品
+        // 4. 不能购买自己的商品
         if (Objects.equals(product.getSellerId(), userId)) {
             throw new BusinessException("不能购买自己的商品");
         }
 
-        // 4. 创建订单
+        // 5. 创建订单并写入地址快照
         Order order = new Order();
         order.setOrderNo(generateOrderNo());
         order.setBuyerId(userId);
         order.setSellerId(product.getSellerId());
         order.setProductId(request.getProductId());
+        order.setAddressId(address.getId());
+        order.setReceiverName(address.getReceiverName());
+        order.setReceiverPhone(address.getReceiverPhone());
+        order.setReceiverProvince(address.getProvince());
+        order.setReceiverCity(address.getCity());
+        order.setReceiverDistrict(address.getDistrict());
+        order.setReceiverDetailAddress(address.getDetailAddress());
+        order.setReceiverPostalCode(address.getPostalCode());
         order.setTotalAmount(product.getPrice());
         order.setStatus(OrderStatus.WAIT_PAY.getCode());
 
         save(order);
 
-        // 5. 记录订单日志
+        // 6. 记录订单日志
         orderLogService.saveLog(order.getId(), OrderStatus.WAIT_PAY.getCode(),
                 String.valueOf(userId), "创建订单");
 
-        // 6. 立即将商品状态更新为锁定状态(status=3)，防止重复购买
+        // 7. 立即将商品状态更新为锁定状态(status=3)，防止重复购买
         //    校园二手市场一物一件，下单即锁定，支付后才真正售出
         try {
             productFeignClient.updateProductStatus(request.getProductId(), 3);
@@ -102,7 +117,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException("商品锁定失败，请重试");
         }
 
-        // 7. 返回订单VO
+        // 8. 返回订单VO
         return buildOrderVO(order, product, null, null);
     }
 
@@ -392,6 +407,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         vo.setBuyerId(order.getBuyerId());
         vo.setSellerId(order.getSellerId());
         vo.setProductId(order.getProductId());
+        vo.setAddressId(order.getAddressId());
+        vo.setReceiverName(order.getReceiverName());
+        vo.setReceiverPhone(order.getReceiverPhone());
+        vo.setReceiverProvince(order.getReceiverProvince());
+        vo.setReceiverCity(order.getReceiverCity());
+        vo.setReceiverDistrict(order.getReceiverDistrict());
+        vo.setReceiverDetailAddress(order.getReceiverDetailAddress());
+        vo.setReceiverPostalCode(order.getReceiverPostalCode());
         vo.setTotalAmount(order.getTotalAmount());
         vo.setStatus(order.getStatus());
         vo.setStatusDesc(OrderStatus.getDescByCode(order.getStatus()));
@@ -419,6 +442,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
 
         return vo;
+    }
+
+    /**
+     * 解析下单地址：优先使用传入 addressId，否则自动使用默认地址
+     */
+    private UserAddressDTO resolveOrderAddress(Long userId, Long addressId) {
+        try {
+            Result<UserAddressDTO> result;
+            if (addressId != null) {
+                result = userAddressFeignClient.getByUserIdAndAddressId(userId, addressId);
+                UserAddressDTO address = result == null ? null : result.getData();
+                if (address == null) {
+                    throw new BusinessException("收货地址不存在或不属于当前用户");
+                }
+                return address;
+            }
+
+            result = userAddressFeignClient.getDefaultByUserId(userId);
+            UserAddressDTO defaultAddress = result == null ? null : result.getData();
+            if (defaultAddress == null) {
+                throw new BusinessException("请先在个人中心新增并设置收货地址");
+            }
+            return defaultAddress;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("获取收货地址失败，userId={}, addressId={}", userId, addressId, e);
+            throw new BusinessException("获取收货地址失败，请稍后重试");
+        }
     }
 
     // ==================== 管理员相关方法实现 ====================

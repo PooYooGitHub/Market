@@ -57,6 +57,12 @@ mybatis-plus:
       id-type: auto
 
 # Knife4j 配置
+sa-token:
+  token-name: satoken
+  is-read-cookie: false
+  is-read-head: true
+  token-prefix: Bearer
+
 knife4j:
   enable: true
   openapi:

@@ -43,6 +43,14 @@ CREATE TABLE `t_order`  (
   `buyer_id` bigint NOT NULL COMMENT '买家ID',
   `seller_id` bigint NOT NULL COMMENT '卖家ID',
   `product_id` bigint NOT NULL COMMENT '商品ID',
+  `address_id` bigint NULL DEFAULT NULL COMMENT '收货地址ID',
+  `receiver_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货人姓名(快照)',
+  `receiver_phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货人手机号(快照)',
+  `receiver_province` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货省份(快照)',
+  `receiver_city` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货城市(快照)',
+  `receiver_district` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货区县(快照)',
+  `receiver_detail_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货详细地址(快照)',
+  `receiver_postal_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '收货邮编(快照)',
   `total_amount` decimal(10, 2) NOT NULL COMMENT '订单总金额',
   `status` tinyint NULL DEFAULT 0 COMMENT '状态 0:待支付 1:已支付 2:已发货 3:已收货/完成 4:已取消 5:售后中',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -51,7 +59,8 @@ CREATE TABLE `t_order`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_order_no`(`order_no` ASC) USING BTREE,
   INDEX `idx_buyer_id`(`buyer_id` ASC) USING BTREE,
-  INDEX `idx_seller_id`(`seller_id` ASC) USING BTREE
+  INDEX `idx_seller_id`(`seller_id` ASC) USING BTREE,
+  INDEX `idx_address_id`(`address_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------

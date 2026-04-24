@@ -42,6 +42,46 @@ public class Order implements Serializable {
     private Long productId;
 
     /**
+     * 收货地址ID（下单时选择）
+     */
+    private Long addressId;
+
+    /**
+     * 收货人姓名（地址快照）
+     */
+    private String receiverName;
+
+    /**
+     * 收货人手机号（地址快照）
+     */
+    private String receiverPhone;
+
+    /**
+     * 收货省份（地址快照）
+     */
+    private String receiverProvince;
+
+    /**
+     * 收货城市（地址快照）
+     */
+    private String receiverCity;
+
+    /**
+     * 收货区县（地址快照）
+     */
+    private String receiverDistrict;
+
+    /**
+     * 收货详细地址（地址快照）
+     */
+    private String receiverDetailAddress;
+
+    /**
+     * 收货邮编（地址快照）
+     */
+    private String receiverPostalCode;
+
+    /**
      * 订单总金额
      */
     private BigDecimal totalAmount;

@@ -106,6 +106,35 @@
     <div v-if="showCheckoutModal" class="modal-overlay" @click.self="showCheckoutModal = false">
       <div class="modal">
         <h3>确认下单</h3>
+        <div class="address-section">
+          <div class="address-header">
+            <span>收货地址</span>
+            <button class="btn-link" @click="router.push('/addresses')">管理地址</button>
+          </div>
+
+          <div v-if="addressLoading" class="address-loading">地址加载中...</div>
+
+          <div v-else-if="addressList.length === 0" class="address-empty">
+            暂无收货地址，请先新增地址后再下单。
+          </div>
+
+          <div v-else class="address-options">
+            <label v-for="addr in addressList" :key="addr.id" class="address-option">
+              <input v-model="selectedAddressId" type="radio" :value="addr.id" />
+              <div class="address-content">
+                <div class="address-line1">
+                  <span class="receiver">{{ addr.receiverName }}</span>
+                  <span class="phone">{{ addr.receiverPhone }}</span>
+                  <span v-if="addr.isDefault" class="default-tag">默认</span>
+                </div>
+                <div class="address-line2">
+                  {{ formatAddress(addr) }}
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="checkout-items">
           <div v-for="item in selectedItems" :key="item.id" class="checkout-item">
             <img :src="item.productImage || defaultImage" class="checkout-img" />
@@ -145,6 +174,7 @@ import {
   removeMultipleFromCart, updateCartSelected, selectAllCart,
   clearCart, createOrder
 } from '@/api/trade'
+import { getAddressList } from '@/api/user'
 
 const router = useRouter()
 
@@ -152,6 +182,9 @@ const cartList = ref([])
 const loading = ref(true)
 const showCheckoutModal = ref(false)
 const checkingOut = ref(false)
+const addressLoading = ref(false)
+const addressList = ref([])
+const selectedAddressId = ref(null)
 
 const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+5Zu+54mHPC90ZXh0Pjwvc3ZnPg=='
 
@@ -161,6 +194,12 @@ const isAllSelected = computed(() => selectableItems.value.length > 0 && selecta
 const totalPrice = computed(() =>
   selectedItems.value.reduce((sum, i) => sum + Number(i.productPrice) * i.quantity, 0).toFixed(2)
 )
+
+const formatAddress = (addr) => {
+  const area = [addr.province, addr.city, addr.district].filter(Boolean).join(' ')
+  const postal = addr.postalCode ? `（邮编：${addr.postalCode}）` : ''
+  return `${area} ${addr.detailAddress || ''}${postal}`.trim()
+}
 
 const loadCart = async () => {
   try {
@@ -242,17 +281,42 @@ const handleClear = async () => {
 
 const handleCheckout = () => {
   if (selectedItems.value.length === 0) return
+  loadAddressOptions()
   showCheckoutModal.value = true
 }
 
+const loadAddressOptions = async () => {
+  addressLoading.value = true
+  try {
+    const res = await getAddressList()
+    addressList.value = res?.data || []
+    const defaultAddress = addressList.value.find(item => item.isDefault)
+    selectedAddressId.value = defaultAddress ? defaultAddress.id : (addressList.value[0]?.id || null)
+  } catch (e) {
+    addressList.value = []
+    selectedAddressId.value = null
+    alert(e.message || '加载收货地址失败')
+  } finally {
+    addressLoading.value = false
+  }
+}
+
 const confirmCheckout = async () => {
+  if (!selectedAddressId.value) {
+    alert('请先选择收货地址')
+    return
+  }
+
   checkingOut.value = true
   const results = []
   const successfulCartIds = [] // 记录成功下单的购物车项ID
 
   for (const item of selectedItems.value) {
     try {
-      const res = await createOrder({ productId: item.productId })
+      const res = await createOrder({
+        productId: item.productId,
+        addressId: selectedAddressId.value
+      })
       results.push({ success: true, title: item.productTitle, orderId: res.data?.id })
       successfulCartIds.push(item.id) // 记录购物车项ID，用于移除
     } catch (e) {
@@ -359,6 +423,18 @@ onMounted(loadCart)
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal { background: #fff; border-radius: 12px; padding: 28px; width: 480px; max-width: 95vw; max-height: 80vh; overflow-y: auto; }
 .modal h3 { margin: 0 0 20px; font-size: 18px; color: #333; }
+.address-section { margin-bottom: 14px; border: 1px solid #f0f0f0; border-radius: 8px; padding: 10px; background: #fafafa; }
+.address-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #333; }
+.btn-link { border: none; background: none; color: #409eff; cursor: pointer; font-size: 12px; padding: 0; }
+.address-loading, .address-empty { font-size: 13px; color: #666; padding: 6px 2px; }
+.address-options { display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; }
+.address-option { display: flex; gap: 8px; align-items: flex-start; padding: 8px; border: 1px solid #ebeef5; border-radius: 6px; background: #fff; cursor: pointer; }
+.address-content { flex: 1; }
+.address-line1 { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.receiver { font-weight: 600; color: #303133; }
+.phone { color: #606266; font-size: 13px; }
+.default-tag { background: #67c23a; color: #fff; font-size: 12px; border-radius: 10px; padding: 0 6px; line-height: 18px; }
+.address-line2 { color: #606266; font-size: 12px; line-height: 1.5; }
 .checkout-items { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; max-height: 320px; overflow-y: auto; }
 .checkout-item { display: flex; gap: 12px; align-items: center; padding: 10px; background: #fafafa; border-radius: 8px; }
 .checkout-img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
@@ -368,4 +444,3 @@ onMounted(loadCart)
 .checkout-note { font-size: 12px; color: #999; margin-bottom: 16px; }
 .modal-btns { display: flex; gap: 12px; justify-content: flex-end; }
 </style>
-

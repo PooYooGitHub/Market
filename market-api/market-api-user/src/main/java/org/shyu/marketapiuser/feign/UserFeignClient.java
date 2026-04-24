@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
  * 注意：Feign调用是服务间直接调用，不经过Gateway
  * 所以path应该是 /user，而不是 /api/user（/api是Gateway路由前缀）
  */
-@FeignClient(name = "market-service-user", path = "/user")
+@FeignClient(name = "market-service-user", contextId = "userFeignClient", path = "/user")
 public interface UserFeignClient {
 
     /**

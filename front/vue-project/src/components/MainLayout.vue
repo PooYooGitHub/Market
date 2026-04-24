@@ -67,6 +67,10 @@
                     <el-icon><User /></el-icon>
                     个人中心
                   </el-dropdown-item>
+                  <el-dropdown-item command="addresses">
+                    <el-icon><Location /></el-icon>
+                    收货地址
+                  </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>
                     退出登录
@@ -125,6 +129,7 @@ import {
   ChatDotRound,
   Medal,
   User,
+  Location,
   ArrowDown,
   SwitchButton,
   DocumentChecked
@@ -147,6 +152,9 @@ const handleCommand = async (command) => {
   switch (command) {
     case 'profile':
       router.push('/profile')
+      break
+    case 'addresses':
+      router.push('/addresses')
       break
     case 'logout':
       try {

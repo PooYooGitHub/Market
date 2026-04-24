@@ -74,3 +74,83 @@ export function changePassword(data) {
     data
   })
 }
+
+// ==================== 收货地址 ====================
+
+/**
+ * 获取当前用户地址列表
+ */
+export function getAddressList() {
+  return request({
+    url: '/api/user/address/list',
+    method: 'get'
+  })
+}
+
+/**
+ * 获取地址详情
+ * @param {number} addressId
+ */
+export function getAddressDetail(addressId) {
+  return request({
+    url: `/api/user/address/${addressId}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 新增地址
+ * @param {Object} data
+ */
+export function createAddress(data) {
+  return request({
+    url: '/api/user/address',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 更新地址
+ * @param {number} addressId
+ * @param {Object} data
+ */
+export function updateAddress(addressId, data) {
+  return request({
+    url: `/api/user/address/${addressId}`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 删除地址
+ * @param {number} addressId
+ */
+export function deleteAddress(addressId) {
+  return request({
+    url: `/api/user/address/${addressId}`,
+    method: 'delete'
+  })
+}
+
+/**
+ * 设置默认地址
+ * @param {number} addressId
+ */
+export function setDefaultAddress(addressId) {
+  return request({
+    url: `/api/user/address/${addressId}/default`,
+    method: 'put'
+  })
+}
+
+/**
+ * 获取默认地址
+ */
+export function getDefaultAddress() {
+  return request({
+    url: '/api/user/address/default',
+    method: 'get'
+  })
+}

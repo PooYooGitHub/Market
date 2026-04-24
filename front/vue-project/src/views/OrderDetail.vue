@@ -45,6 +45,15 @@
           </div>
         </section>
 
+        <section v-if="hasAddressSnapshot" class="card-section">
+          <h3 class="section-title">收货信息</h3>
+          <div class="info-grid">
+            <div class="info-item"><span class="k">收货人</span><span class="v">{{ order.receiverName || '-' }}</span></div>
+            <div class="info-item"><span class="k">联系电话</span><span class="v">{{ order.receiverPhone || '-' }}</span></div>
+            <div class="info-item full"><span class="k">收货地址</span><span class="v">{{ fullReceiverAddress }}</span></div>
+          </div>
+        </section>
+
         <section class="card-section">
           <h3 class="section-title">交易双方</h3>
           <div class="parties-grid">
@@ -130,6 +139,19 @@ const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/s
 
 const isBuyer = computed(() => order.value && userStore.userInfo && order.value.buyerId === userStore.userInfo.id)
 const isSeller = computed(() => order.value && userStore.userInfo && order.value.sellerId === userStore.userInfo.id)
+const hasAddressSnapshot = computed(() => {
+  return !!(order.value && (order.value.receiverName || order.value.receiverPhone || order.value.receiverDetailAddress))
+})
+const fullReceiverAddress = computed(() => {
+  if (!order.value) return '-'
+  const area = [order.value.receiverProvince, order.value.receiverCity, order.value.receiverDistrict]
+    .filter(Boolean)
+    .join(' ')
+  const detail = order.value.receiverDetailAddress || ''
+  const postal = order.value.receiverPostalCode ? `（邮编：${order.value.receiverPostalCode}）` : ''
+  const result = `${area} ${detail}${postal}`.trim()
+  return result || '-'
+})
 
 const canShowDisputeAction = computed(() => {
   if (!order.value) return false
@@ -453,6 +475,15 @@ onMounted(() => {
   padding: 8px 10px;
   border-radius: 8px;
   background: #f8fbff;
+}
+
+.info-item.full {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.info-item.full .v {
+  color: #374151;
 }
 
 .info-item .k {

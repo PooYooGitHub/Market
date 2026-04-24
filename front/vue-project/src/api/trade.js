@@ -84,6 +84,7 @@ export function getCartSelectedCount() {
  * 创建订单
  * @param {Object} data
  * @param {number} data.productId - 商品ID
+ * @param {number} [data.addressId] - 收货地址ID（可选，不传则使用默认地址）
  */
 export function createOrder(data) {
   return request({ url: '/api/trade/order/create', method: 'post', data })

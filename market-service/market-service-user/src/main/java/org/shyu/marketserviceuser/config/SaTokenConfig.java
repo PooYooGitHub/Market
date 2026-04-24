@@ -60,6 +60,11 @@ public class SaTokenConfig implements WebMvcConfigurer {
             return true;
         }
 
+        // 微服务内部 Feign 调用接口
+        if (path.startsWith("/feign/")) {
+            return true;
+        }
+
         // 仲裁管理接口（临时）
         if (path.startsWith("/arbitration/")) {
             return true;

@@ -348,7 +348,15 @@ const buyNow = async () => {
     router.push(`/order/${res.data.id}`)
   } catch (error) {
     console.error('创建订单失败:', error)
-    alert(error.message || '创建订单失败')
+    const message = error?.message || '创建订单失败'
+    if (message.includes('收货地址')) {
+      const goAddress = confirm(`${message}\n\n是否现在去维护收货地址？`)
+      if (goAddress) {
+        router.push('/addresses')
+      }
+      return
+    }
+    alert(message)
   }
 }
 

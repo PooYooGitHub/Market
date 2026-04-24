@@ -17,5 +17,10 @@ public class CreateOrderRequest implements Serializable {
      */
     @NotNull(message = "商品ID不能为空")
     private Long productId;
+
+    /**
+     * 收货地址ID（可选，不传时将自动使用默认地址）
+     */
+    private Long addressId;
 }
 

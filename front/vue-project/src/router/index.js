@@ -26,6 +26,7 @@ import SellerDisputeDetail from '@/views/Dispute/SellerDisputeDetail.vue'
 import DisputeCenter from '@/views/Dispute/DisputeCenter.vue'
 import SimpleTest from '@/views/SimpleTest.vue'
 import UserProfile from '@/views/UserProfile.vue'
+import AddressManage from '@/views/AddressManage.vue'
 
 // 绠＄悊绯荤粺鐩稿叧瀵煎叆
 import AdminLayout from '@/layouts/AdminLayout.vue'
@@ -166,6 +167,15 @@ const routes = [
         component: UserProfile,
         meta: {
           title: '用户资料',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'addresses',
+        name: 'AddressManage',
+        component: AddressManage,
+        meta: {
+          title: '收货地址',
           requiresAuth: true
         }
       },

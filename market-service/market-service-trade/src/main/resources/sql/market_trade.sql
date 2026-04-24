@@ -10,6 +10,14 @@ CREATE TABLE IF NOT EXISTS `t_order` (
     `buyer_id`     BIGINT         NOT NULL COMMENT '买家ID',
     `seller_id`    BIGINT         NOT NULL COMMENT '卖家ID',
     `product_id`   BIGINT         NOT NULL COMMENT '商品ID',
+    `address_id`   BIGINT                  DEFAULT NULL COMMENT '收货地址ID',
+    `receiver_name` VARCHAR(50)            DEFAULT NULL COMMENT '收货人姓名(快照)',
+    `receiver_phone` VARCHAR(20)           DEFAULT NULL COMMENT '收货人手机号(快照)',
+    `receiver_province` VARCHAR(50)        DEFAULT NULL COMMENT '收货省份(快照)',
+    `receiver_city` VARCHAR(50)            DEFAULT NULL COMMENT '收货城市(快照)',
+    `receiver_district` VARCHAR(50)        DEFAULT NULL COMMENT '收货区县(快照)',
+    `receiver_detail_address` VARCHAR(255) DEFAULT NULL COMMENT '收货详细地址(快照)',
+    `receiver_postal_code` VARCHAR(20)     DEFAULT NULL COMMENT '收货邮编(快照)',
     `total_amount` DECIMAL(10, 2) NOT NULL COMMENT '订单总金额',
     `status`       TINYINT        NOT NULL DEFAULT 0 COMMENT '订单状态:0待支付 1已支付 2已发货 3已收货/完成 4已取消 5售后中',
     `create_time`  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间(下单时间)',
@@ -20,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `t_order` (
     KEY `idx_buyer_id` (`buyer_id`),
     KEY `idx_seller_id` (`seller_id`),
     KEY `idx_product_id` (`product_id`),
+    KEY `idx_address_id` (`address_id`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
